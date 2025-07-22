@@ -1,0 +1,81 @@
+# Laravel
+/vendor/
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.backup
+.env.production
+
+# Laravel specific
+/public/hot
+/public/storage
+/storage/*.key
+/storage/debugbar
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+/storage/logs/*
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.project
+.settings
+.vagrant
+Vagrantfile
+phpunit.xml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build files
+/public/build
+/public/css/app.css
+/public/js/app.js
+/public/mix-manifest.json
+
+# Testing
+.phpunit.cache
+coverage/
+.coverage
+
+# Deployment
+.env.production.local
+deploy.php
+.deployer/
+
+# Documentation build
+/docs/_build/
+/docs/.doctrees/
+
+# Temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Backup files
+*.bak
+*.backup
+*_backup
+*_old
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
+
+# Keep .gitkeep files
+!.gitkeep
+!.env.example
