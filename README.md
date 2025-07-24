@@ -1,84 +1,170 @@
-# MonEpice&Riz - E-commerce Platform
+# MonEpice&Riz - Plateforme E-commerce
 
-Site e-commerce pour l'épicerie MonEpice&Riz basée à Abidjan, développé avec Laravel et React (Inertia.js).
+## Description
+MonEpice&Riz est une plateforme e-commerce moderne pour la vente en ligne de produits d'épicerie avec support des produits à poids variable, paiement mobile et livraison intégrée.
 
-## 🚀 Stack Technique
+## 🚧 État du Développement (24/07/2025)
 
-- **Backend:** Laravel 11.x
-- **Frontend:** React avec Inertia.js
-- **Database:** Supabase (PostgreSQL)
-- **Styling:** Tailwind CSS + Shadcn/ui
-- **Payment:** CinetPay
-- **Delivery:** Yango API
-- **Hosting:** o2Switch
+- **Phase 0** : ✅ Complétée (Fondations et configuration)
+- **Phase 1** : 🚧 En cours (Backend terminé, Frontend à faire)
+  - ✅ Authentification 2FA admin
+  - ✅ CRUD Catégories et Produits
+  - ✅ Service Storage Supabase
+  - ✅ Seeders avec données démo
+  - ⏳ Interface utilisateur (React/Inertia)
 
-## 📚 Documentation
+👉 **Pour plus de détails, voir [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)**
 
-Toute la documentation du projet se trouve dans le dossier `/docs` :
+## 🚀 Installation
 
-- [PRD (Product Requirements)](./docs/prd.md) - Spécifications fonctionnelles
-- [Architecture Technique](./docs/structure.md) - Structure et patterns
-- [Guide Supabase](./docs/supabase.md) - Configuration base de données
-- [Intégration CinetPay](./docs/cinetpay.md) - Système de paiement
-- [Plan de Développement](./docs/task.md) - Suivi des tâches
-- [Déploiement o2Switch](./docs/deployment-o2switch.md) - Guide de mise en production
+### Prérequis
+- PHP 8.2 ou supérieur
+- Composer 2.x
+- Node.js 18.x ou supérieur
+- SQLite (développement) ou PostgreSQL (production)
+- Redis (optionnel, pour le cache)
 
-## 🛠️ Installation Locale
+### Étapes d'installation
 
 1. **Cloner le repository**
-   ```bash
-   git clone [url-du-repo]
-   cd monepiceriz
-   ```
+```bash
+git clone [url-du-repo]
+cd monepiceriz
+```
 
-2. **Configurer l'environnement**
-   ```bash
-   cp .env.example .env
-   # Éditer .env avec vos credentials
-   ```
+2. **Installer les dépendances PHP**
+```bash
+composer install
+```
 
-3. **Installer les dépendances**
-   ```bash
-   composer install
-   npm install
-   ```
+3. **Installer les dépendances JavaScript**
+```bash
+npm install
+```
 
-4. **Générer la clé d'application**
-   ```bash
-   php artisan key:generate
-   ```
+4. **Configuration de l'environnement**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-5. **Lancer le développement**
-   ```bash
-   npm run dev
-   php artisan serve
-   ```
+5. **Créer la base de données SQLite**
+```bash
+touch database/database.sqlite
+```
 
-## 🏗️ Structure du Projet
+6. **Lancer les migrations et seeders**
+```bash
+php artisan migrate:fresh --seed
+```
+
+7. **Compiler les assets**
+```bash
+npm run dev
+```
+
+8. **Lancer le serveur de développement**
+```bash
+php artisan serve
+```
+
+L'application sera accessible à l'adresse : http://localhost:8000
+
+## 👤 Comptes de test
+
+### Administrateur
+- Email : admin@monepiceriz.com
+- Mot de passe : admin123
+
+### Manager
+- Email : manager@monepiceriz.com
+- Mot de passe : manager123
+
+## 📁 Structure du projet
 
 ```
 monepiceriz/
-├── docs/           # Documentation complète
-├── app/            # Code Laravel
-├── resources/      # Vues React/Inertia
-├── database/       # Migrations et seeders
-├── public/         # Assets publics
-└── config/         # Configuration
+├── app/
+│   ├── Domain/          # Logique métier (DDD)
+│   │   ├── Catalog/     # Produits, catégories
+│   │   ├── Order/       # Commandes
+│   │   ├── Payment/     # Paiements
+│   │   └── Shipping/    # Livraison
+│   ├── Http/
+│   │   └── Controllers/
+│   │       └── Admin/   # Controllers admin
+│   ├── Services/        # Services métier
+│   └── Traits/          # Traits réutilisables
+├── database/
+│   ├── migrations/      # Migrations SQL
+│   └── seeders/        # Données de test
+├── resources/
+│   ├── js/             # Components React
+│   └── views/          # Vues Blade
+└── docs/               # Documentation
 ```
+
+## 🛠️ Technologies utilisées
+
+### Backend
+- **Laravel 11** - Framework PHP
+- **Laravel Fortify** - Authentification avec 2FA
+- **Inertia.js** - SPA sans API
+- **Spatie Packages** - Utilitaires Laravel
+
+### Frontend
+- **React** - Interface utilisateur
+- **TypeScript** - Typage statique
+- **Tailwind CSS** - Styles utilitaires
+- **Shadcn/ui** - Composants UI
+
+### Base de données
+- **SQLite** - Développement local
+- **PostgreSQL** - Production (Supabase)
+
+### Services externes
+- **Supabase** - Base de données et stockage
+- **CinetPay** - Paiement mobile
+- **Yango** - Service de livraison
+
+## 📋 Fonctionnalités principales
+
+### Pour les clients
+- Navigation par catégories
+- Recherche de produits
+- Panier d'achat
+- Checkout simplifié (guest)
+- Paiement mobile sécurisé
+- Suivi de livraison
+
+### Pour l'administration
+- Tableau de bord
+- Gestion des catégories
+- Gestion des produits et SKUs
+- Gestion des commandes
+- Ajustement des poids (produits variables)
+- Rapports et statistiques
+
+## 🔒 Sécurité
+
+- Authentification 2FA pour l'admin
+- Protection CSRF
+- Validation des entrées
+- Chiffrement des données sensibles
+- Row Level Security (PostgreSQL)
+- Rate limiting sur les API
+
+## 📚 Documentation
+
+- [Plan d'implémentation](docs/task.md)
+- [Phase 0 - Fondations](docs/phases/phase0-foundations.md)
+- [Phase 1 - Core Shop](docs/phases/phase1-core-shop.md)
+- [État d'implémentation](IMPLEMENTATION_STATUS.md)
 
 ## 🤝 Contribution
 
-1. Lire la documentation dans `/docs`
-2. Suivre les conventions établies
-3. Tester avant de push
-4. Documenter les changements
+Ce projet est privé. Pour toute contribution, merci de contacter l'équipe de développement.
 
-## 📞 Support
-
-- Documentation technique : `/docs`
-- Tracking des bugs : `/docs/bugs.md`
-- Plan de développement : `/docs/task.md`
-
-## 📄 License
+## 📝 License
 
 Propriétaire - MonEpice&Riz © 2025
