@@ -5,7 +5,7 @@ import { formatPrice } from '@/lib/utils'
 import { Link } from '@inertiajs/react'
 
 export function CartSheet() {
-  const { items, updateQuantity, removeItem, totalAmount, clearCart } = useCart()
+  const { items, updateQuantity, removeFromCart, totalAmount, clearCart } = useCart()
 
   if (items.length === 0) {
     return (
@@ -24,33 +24,33 @@ export function CartSheet() {
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.skuId} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+            <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
               {/* Image */}
-              {item.image && (
+              {item.product.image_url && (
                 <img 
-                  src={item.image} 
-                  alt={item.name}
+                  src={item.product.image_url} 
+                  alt={item.product.name}
                   className="w-20 h-20 object-cover rounded"
                 />
               )}
               
               {/* Détails */}
               <div className="flex-1">
-                <h4 className="font-medium text-sm">{item.name}</h4>
-                {item.weight && (
+                <h4 className="font-medium text-sm">{item.product.name}</h4>
+                {item.product.weight && (
                   <p className="text-xs text-gray-500">
-                    {item.weight >= 1 ? `${item.weight} kg` : `${item.weight * 1000} g`}
+                    {item.product.weight >= 1 ? `${item.product.weight} kg` : `${item.product.weight * 1000} g`}
                   </p>
                 )}
                 <p className="text-sm font-semibold mt-1">
-                  {formatPrice(item.price)}
+                  {formatPrice(item.product.is_promoted && item.product.promo_price ? item.product.promo_price : item.product.price_ttc)}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="flex flex-col items-end gap-2">
                 <button
-                  onClick={() => removeItem(item.skuId)}
+                  onClick={() => removeFromCart(item.id)}
                   className="text-red-500 hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -59,7 +59,7 @@ export function CartSheet() {
                 {/* Quantité */}
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => updateQuantity(item.skuId, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
                     className="h-8 w-8 flex items-center justify-center border rounded hover:bg-gray-100"
                   >
                     <Minus className="h-4 w-4" />
@@ -68,7 +68,7 @@ export function CartSheet() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.skuId, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     className="h-8 w-8 flex items-center justify-center border rounded hover:bg-gray-100"
                   >
                     <Plus className="h-4 w-4" />

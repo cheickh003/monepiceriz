@@ -1,6 +1,8 @@
-import { Head, Link } from '@inertiajs/react'
+import { Link } from '@inertiajs/react'
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
+import { SEO } from '@/Components/SEO'
+import ShopLayout from '@/Layouts/ShopLayout'
 
 interface Product {
   id: number
@@ -26,10 +28,20 @@ interface ProductDetailProps {
 
 export default function ProductDetail({ product, relatedProducts }: ProductDetailProps) {
   const [quantity, setQuantity] = useState(1)
+  const hasStock = true // À remplacer par la vraie logique de stock
 
   return (
-    <>
-      <Head title={`${product.name} - MonEpice&Riz`} />
+    <ShopLayout>
+      <SEO 
+        title={product.name}
+        description={product.description || `Achetez ${product.name} sur MonEpice&Riz. ${product.category.name} de qualité supérieure.`}
+        keywords={`${product.name}, ${product.category.name}, épicerie africaine, MonEpice&Riz`}
+        type="product"
+        price={product.effective_price || product.price_ttc}
+        availability={hasStock ? 'in stock' : 'out of stock'}
+        category={product.category.name}
+        image={product.main_image}
+      />
       
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -88,6 +100,6 @@ export default function ProductDetail({ product, relatedProducts }: ProductDetai
           </div>
         </div>
       </div>
-    </>
+    </ShopLayout>
   )
 }

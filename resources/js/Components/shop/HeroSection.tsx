@@ -1,15 +1,30 @@
 import { Link } from '@inertiajs/react'
 import { Button } from '@/Components/ui/button'
+import { Truck, ShieldCheck, Clock, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface HeroSectionProps {
   promotions: {
     title: string
     subtitle: string
     image?: string
+    badges?: string[]
   }
 }
 
 export function HeroSection({ promotions }: HeroSectionProps) {
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    setIsVisible(true)
+  }, [])
+
+  const trustIndicators = [
+    { icon: Truck, text: "Livraison gratuite dès 50€" },
+    { icon: ShieldCheck, text: "Produits frais garantis" },
+    { icon: Clock, text: "Livraison en 24h" }
+  ]
+
   return (
     <section className="px-4 py-6 md:px-8 md:py-8">
       <div className="max-w-7xl mx-auto">
@@ -17,22 +32,45 @@ export function HeroSection({ promotions }: HeroSectionProps) {
           {/* Contenu */}
           <div className="flex flex-col md:flex-row items-center">
             {/* Texte */}
-            <div className="flex-1 p-8 md:p-12 z-10">
-              <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+            <div className={`flex-1 p-8 md:p-12 z-10 transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
+              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
                 {promotions.title}
-              </h2>
+              </h1>
               <p className="text-lg md:text-xl text-gray-700 mb-6">
                 {promotions.subtitle}
               </p>
-              <Link href="/products?promo=true">
-                <Button size="lg" className="bg-green-600 hover:bg-green-700">
-                  Acheter maintenant
-                </Button>
-              </Link>
+              
+              {/* Trust Indicators */}
+              <div className="flex flex-wrap gap-4 mb-8">
+                {trustIndicators.map((indicator, index) => {
+                  const Icon = indicator.icon
+                  return (
+                    <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
+                      <Icon className="w-4 h-4 text-green-600" />
+                      <span>{indicator.text}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/products?promo=true">
+                  <Button size="lg" className="bg-green-600 hover:bg-green-700 w-full sm:w-auto gap-2">
+                    Acheter maintenant
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <Link href="/categories">
+                  <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                    Découvrir nos catégories
+                  </Button>
+                </Link>
+              </div>
             </div>
 
             {/* Image décorative */}
-            <div className="flex-1 relative h-64 md:h-96">
+            <div className={`flex-1 relative h-64 md:h-96 transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
               <div className="absolute inset-0 flex items-center justify-center">
                 {/* Image de panier avec légumes */}
                 <svg className="w-full h-full max-w-sm" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">

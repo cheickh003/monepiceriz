@@ -65,6 +65,7 @@ class Product extends Model
         'promo_price',
         'is_promoted',
         'effective_price',
+        'image_url',
     ];
     
     /**
@@ -187,5 +188,33 @@ class Product extends Model
     public function getEffectivePriceAttribute(): ?float
     {
         return $this->promo_price ?? $this->price_ttc;
+    }
+    
+    /**
+     * Get the first image URL
+     *
+     * @return string|null
+     */
+    public function getFirstImageUrl(): ?string
+    {
+        if ($this->main_image) {
+            return asset('storage/' . $this->main_image);
+        }
+        
+        if (!empty($this->gallery_images) && is_array($this->gallery_images)) {
+            return asset('storage/' . $this->gallery_images[0]);
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Get the main image URL attribute
+     *
+     * @return string|null
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        return $this->getFirstImageUrl();
     }
 }

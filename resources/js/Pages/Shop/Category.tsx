@@ -1,51 +1,25 @@
-import { Head, Link } from '@inertiajs/react'
-import { ChevronRight } from 'lucide-react'
-
-interface Category {
-  id: number
-  name: string
-  slug: string
-  description?: string
-  parent_id?: number
-  icon?: string
-}
-
-interface Product {
-  id: number
-  name: string
-  slug: string
-  price_ttc: number
-  promo_price?: number
-  is_promoted: boolean
-  effective_price: number
-  is_variable_weight: boolean
-  main_image?: string
-  category: Category
-  default_sku?: {
-    id: number
-    sku: string
-    price_ttc: number
-    stock_quantity: number
-  }
-}
+import { Link } from '@inertiajs/react'
+import { ChevronRight, Package } from 'lucide-react'
+import ShopLayout from '@/Layouts/ShopLayout'
+import { SEO } from '@/Components/SEO'
+import { formatPrice } from '@/lib/utils'
+import { Product, Category, PaginatedResponse } from '@/types'
 
 interface CategoryPageProps {
   category: Category
   subcategories: Category[]
-  products: {
-    data: Product[]
-    current_page: number
-    last_page: number
-    per_page: number
-    total: number
-  }
+  products: PaginatedResponse<Product>
   filters: any
 }
 
 export default function CategoryPage({ category, subcategories, products }: CategoryPageProps) {
   return (
-    <>
-      <Head title={`${category.name} - MonEpice&Riz`} />
+    <ShopLayout>
+      <SEO 
+        title={category.name}
+        description={category.description || `Découvrez notre sélection de ${category.name}. Produits de qualité, livraison rapide.`}
+        keywords={`${category.name}, épicerie africaine, produits africains, MonEpice&Riz`}
+      />
       
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -109,9 +83,17 @@ export default function CategoryPage({ category, subcategories, products }: Cate
                   >
                     {/* Image */}
                     <div className="aspect-square overflow-hidden rounded-t-lg bg-gray-100">
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-gray-400">Image</span>
-                      </div>
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-16 h-16 text-gray-300" />
+                        </div>
+                      )}
                     </div>
 
                     {/* Info */}
@@ -122,7 +104,7 @@ export default function CategoryPage({ category, subcategories, products }: Cate
                       {/* Price */}
                       <div>
                         <span className="text-lg font-bold">
-                          {product.effective_price} F CFA
+                          {formatPrice(product.effective_price)}
                         </span>
                         {product.is_variable_weight && (
                           <span className="text-xs text-gray-500 block">/kg</span>
@@ -154,6 +136,6 @@ export default function CategoryPage({ category, subcategories, products }: Cate
           </div>
         </div>
       </div>
-    </>
+    </ShopLayout>
   )
 }

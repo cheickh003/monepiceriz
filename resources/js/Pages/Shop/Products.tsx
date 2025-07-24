@@ -1,16 +1,13 @@
-import { Head, Link, router } from '@inertiajs/react'
+import { Link, router } from '@inertiajs/react'
 import { useState } from 'react'
 import ShopLayout from '@/Layouts/ShopLayout'
+import { SEO } from '@/Components/SEO'
+import { ProductSection } from '@/Components/shop/ProductSection'
+import AdvancedFilters from '@/Components/shop/AdvancedFilters'
+import BreadcrumbNavigation, { generateBreadcrumbs } from '@/Components/shop/BreadcrumbNavigation'
+import QuickViewModal from '@/Components/shop/QuickViewModal'
 import { Button } from '@/Components/ui/button'
-import { Card } from '@/Components/ui/card'
-import { Checkbox } from '@/Components/ui/checkbox'
-import { Label } from '@/Components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/Components/ui/select'
-import { Slider } from '@/Components/ui/slider'
-import { formatPrice } from '@/lib/utils'
-import { useCart } from '@/contexts/CartContext'
-import { Plus, SlidersHorizontal } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/Components/ui/sheet'
+import { LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface Category {
   id: number
@@ -44,6 +41,10 @@ interface Filters {
   promo: boolean
   in_stock: boolean
   sort: string
+  brand?: string
+  origin?: string
+  rating?: number
+  view?: 'grid' | 'list'
 }
 
 interface ProductsPageProps {
@@ -59,249 +60,234 @@ interface ProductsPageProps {
 }
 
 export default function Products({ products, categories, filters }: ProductsPageProps) {
-  const { addItem } = useCart()
-  const [priceRange, setPriceRange] = useState([filters.min_price || 0, filters.max_price || 10000])
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(filters.view || 'grid')
 
-  const handleFilterChange = (key: string, value: any) => {
-    const newFilters = { ...filters, [key]: value }
-    router.get('/products', newFilters, { preserveState: true, preserveScroll: true })
-  }
-
-  const handlePriceRangeChange = (value: number[]) => {
-    setPriceRange(value)
-  }
-
-  const applyPriceFilter = () => {
-    handleFilterChange('min_price', priceRange[0])
-    handleFilterChange('max_price', priceRange[1])
-  }
-
-  const handleAddToCart = (product: Product) => {
-    if (!product.default_sku) return
-
-    addItem({
-      id: product.id,
-      productId: product.id,
-      skuId: product.default_sku.id,
-      name: product.name,
-      image: product.main_image,
-      price: product.effective_price,
-      isVariableWeight: product.is_variable_weight,
+  const handleFiltersChange = (newFilters: any) => {
+    router.get('/products', { ...filters, ...newFilters }, { 
+      preserveState: true, 
+      preserveScroll: true 
     })
   }
 
-  const FilterContent = () => (
-    <div className="space-y-6">
-      {/* Categories */}
-      <div>
-        <h3 className="font-semibold mb-3">Catégories</h3>
-        <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={`cat-${category.id}`}
-                checked={filters.category === category.id}
-                onCheckedChange={(checked) => 
-                  handleFilterChange('category', checked ? category.id : undefined)
-                }
-              />
-              <Label htmlFor={`cat-${category.id}`} className="cursor-pointer">
-                {category.name}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
+  const handleQuickView = (product: Product) => {
+    setSelectedProduct(product)
+    setIsQuickViewOpen(true)
+  }
 
-      {/* Price Range */}
-      <div>
-        <h3 className="font-semibold mb-3">Prix</h3>
-        <div className="space-y-4">
-          <Slider
-            value={priceRange}
-            onValueChange={handlePriceRangeChange}
-            max={10000}
-            step={100}
-            className="w-full"
-          />
-          <div className="flex items-center justify-between text-sm">
-            <span>{formatPrice(priceRange[0])}</span>
-            <span>{formatPrice(priceRange[1])}</span>
-          </div>
-          <Button onClick={applyPriceFilter} size="sm" className="w-full">
-            Appliquer
-          </Button>
-        </div>
-      </div>
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode)
+    handleFiltersChange({ view: mode })
+  }
 
-      {/* Other Filters */}
-      <div>
-        <h3 className="font-semibold mb-3">Filtres</h3>
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="promo"
-              checked={filters.promo}
-              onCheckedChange={(checked) => handleFilterChange('promo', checked)}
-            />
-            <Label htmlFor="promo" className="cursor-pointer">
-              En promotion
-            </Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="in_stock"
-              checked={filters.in_stock}
-              onCheckedChange={(checked) => handleFilterChange('in_stock', checked)}
-            />
-            <Label htmlFor="in_stock" className="cursor-pointer">
-              En stock uniquement
-            </Label>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  const handlePageChange = (page: number) => {
+    router.get('/products', { ...filters, page }, { 
+      preserveState: true,
+      preserveScroll: false 
+    })
+  }
+
+  // Prepare filter options
+  const filterOptions = {
+    categories: categories.map(cat => ({
+      label: cat.name,
+      value: cat.id.toString(),
+      count: 0 // TODO: Get count from backend
+    })),
+    brands: [], // TODO: Get from backend
+    origins: [], // TODO: Get from backend
+  }
+
+  const breadcrumbItems = generateBreadcrumbs('search', { query: 'Tous les produits' })
 
   return (
     <ShopLayout>
-      <Head title="Tous les produits - MonEpice&Riz" />
+      <SEO 
+        title="Tous les produits"
+        description="Découvrez notre sélection complète de produits africains : épices, riz, alimentation et plus. Filtrez par catégorie, prix et disponibilité."
+        keywords="produits africains, épices, riz, alimentation africaine, boutique en ligne, MonEpice&Riz"
+      />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Breadcrumb */}
+        <BreadcrumbNavigation items={breadcrumbItems} className="mb-6" />
+        
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">Tous les produits</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Tous les produits</h1>
+            <p className="text-gray-600 mt-1">
+              {products.total} produit{products.total > 1 ? 's' : ''} disponible{products.total > 1 ? 's' : ''}
+            </p>
+          </div>
           
-          <div className="flex items-center gap-4">
-            {/* Mobile Filter Button */}
-            <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden">
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  Filtres
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left">
-                <SheetHeader>
-                  <SheetTitle>Filtres</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6">
-                  <FilterContent />
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            {/* Sort */}
-            <Select value={filters.sort} onValueChange={(value) => handleFilterChange('sort', value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trier par" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="position">Pertinence</SelectItem>
-                <SelectItem value="price_asc">Prix croissant</SelectItem>
-                <SelectItem value="price_desc">Prix décroissant</SelectItem>
-                <SelectItem value="name">Nom A-Z</SelectItem>
-                <SelectItem value="newest">Nouveautés</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'grid' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => handleViewModeChange('grid')}
+              aria-label="Vue grille"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => handleViewModeChange('list')}
+              aria-label="Vue liste"
+            >
+              <List className="h-4 w-4" />
+            </Button>
           </div>
         </div>
+        
+        {/* Advanced Filters */}
+        <AdvancedFilters
+          categories={filterOptions.categories}
+          brands={filterOptions.brands}
+          origins={filterOptions.origins}
+          onFiltersChange={handleFiltersChange}
+          productCount={products.total}
+          className="mb-6"
+        />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Desktop Filters */}
-          <aside className="hidden lg:block">
-            <FilterContent />
-          </aside>
-
-          {/* Products Grid */}
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {products.data.map((product) => (
-                <Card key={product.id} className="group h-full flex flex-col">
-                  <Link href={`/products/${product.slug}`} className="flex-1 flex flex-col">
-                    {/* Image */}
-                    <div className="relative aspect-square overflow-hidden rounded-t-lg bg-gray-100">
-                      {product.main_image ? (
-                        <img 
-                          src={product.main_image} 
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-gray-400">Image</span>
-                        </div>
-                      )}
-                      
-                      {/* Promo Badge */}
-                      {product.is_promoted && product.promo_price && (
-                        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 text-xs rounded">
-                          -{Math.round(((product.price_ttc - product.promo_price) / product.price_ttc) * 100)}%
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="p-3 flex-1 flex flex-col">
-                      <h3 className="font-medium text-sm line-clamp-2 mb-1">{product.name}</h3>
-                      <p className="text-xs text-gray-500 mb-2">{product.category.name}</p>
-                      
-                      {/* Price */}
-                      <div className="mt-auto">
-                        {product.is_promoted && product.promo_price ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-green-600">
-                              {formatPrice(product.promo_price)}
-                            </span>
-                            <span className="text-sm text-gray-400 line-through">
-                              {formatPrice(product.price_ttc)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-lg font-bold">
-                            {formatPrice(product.effective_price)}
-                          </span>
-                        )}
-                        {product.is_variable_weight && (
-                          <span className="text-xs text-gray-500 block">/kg</span>
-                        )}
+        {/* Products Section */}
+        {viewMode === 'grid' ? (
+          <ProductSection
+            title=""
+            products={products.data}
+            onQuickView={handleQuickView}
+          />
+        ) : (
+          // List view
+          <div className="space-y-4">
+            {products.data.map((product) => (
+              <div key={product.id} className="bg-white rounded-lg shadow-sm p-4 flex gap-4 hover:shadow-md transition-shadow">
+                <Link href={`/products/${product.slug}`} className="flex-shrink-0">
+                  <div className="w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                    {product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="w-8 h-8 text-gray-300" />
                       </div>
-                    </div>
-                  </Link>
-
-                  {/* Add to Cart Button */}
-                  <div className="p-3 pt-0">
-                    <Button
-                      onClick={() => handleAddToCart(product)}
-                      disabled={!product.default_sku || product.default_sku.stock_quantity === 0}
-                      size="sm"
-                      className="w-full"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
+                    )}
                   </div>
-                </Card>
-              ))}
-            </div>
+                </Link>
+                
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <Link href={`/products/${product.slug}`}>
+                      <h3 className="font-semibold text-lg hover:text-green-600 transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
+                    <p className="text-sm text-gray-600">{product.category.name}</p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-2">
+                    <div>
+                      {product.is_promoted && product.promo_price ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl font-bold text-green-600">
+                            {formatPrice(product.promo_price)}
+                          </span>
+                          <span className="text-sm text-gray-400 line-through">
+                            {formatPrice(product.price_ttc)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xl font-bold">
+                          {formatPrice(product.effective_price)}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleQuickView(product)}
+                      >
+                        Vue rapide
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-            {/* Pagination */}
-            {products.last_page > 1 && (
-              <div className="mt-8 flex justify-center gap-2">
-                {Array.from({ length: products.last_page }, (_, i) => i + 1).map((page) => (
+        {/* Pagination */}
+        {products.last_page > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(products.current_page - 1)}
+              disabled={products.current_page === 1}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Précédent
+            </Button>
+            
+            {/* Page numbers */}
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(5, products.last_page) }, (_, i) => {
+                let page: number
+                if (products.last_page <= 5) {
+                  page = i + 1
+                } else if (products.current_page <= 3) {
+                  page = i + 1
+                } else if (products.current_page >= products.last_page - 2) {
+                  page = products.last_page - 4 + i
+                } else {
+                  page = products.current_page - 2 + i
+                }
+                
+                return (
                   <Button
                     key={page}
                     variant={page === products.current_page ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => router.get('/products', { ...filters, page }, { preserveState: true })}
+                    onClick={() => handlePageChange(page)}
+                    className="min-w-[40px]"
                   >
                     {page}
                   </Button>
-                ))}
-              </div>
-            )}
+                )
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(products.current_page + 1)}
+              disabled={products.current_page === products.last_page}
+            >
+              Suivant
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
-        </div>
+        )}
       </div>
+      
+      {/* Quick View Modal */}
+      <QuickViewModal
+        product={selectedProduct}
+        isOpen={isQuickViewOpen}
+        onClose={() => {
+          setIsQuickViewOpen(false)
+          setSelectedProduct(null)
+        }}
+      />
     </ShopLayout>
   )
 }

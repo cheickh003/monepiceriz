@@ -12,6 +12,7 @@ Route::get('/products', [ShopController::class, 'products'])->name('products');
 Route::get('/products/{product:slug}', [ShopController::class, 'product'])->name('product.show');
 Route::get('/category/{category:slug}', [ShopController::class, 'category'])->name('category.show');
 Route::get('/search', [ShopController::class, 'search'])->name('search');
+Route::get('/api/search-suggestions', [ShopController::class, 'searchSuggestions'])->name('search.suggestions');
 
 // Pages temporaires
 Route::get('/favorites', function () {
@@ -21,6 +22,9 @@ Route::get('/favorites', function () {
 Route::get('/menu', function () {
     return Inertia::render('Shop/Menu');
 })->name('menu');
+
+// Newsletter
+Route::post('/newsletter/subscribe', [ShopController::class, 'subscribeNewsletter'])->name('newsletter.subscribe');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

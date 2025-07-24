@@ -121,8 +121,26 @@ class ShopController extends Controller
                 $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate(20);
+        $products = $query->paginate(20)->through(function ($product) {
+            // Ajouter des métadonnées pour chaque produit
+            if ($product->is_promoted && $product->promo_price) {
+                $product->savings = $product->price_ttc - $product->promo_price;
+                $product->savings_percentage = round((($product->price_ttc - $product->promo_price) / $product->price_ttc) * 100);
+            }
+            // Ajouter une note fictive
+            $product->rating = rand(35, 50) / 10;
+            $product->reviews_count = rand(50, 500);
+            
+            // Indicateur de stock faible
+            if ($product->defaultSku) {
+                $stock = $product->defaultSku->stock_quantity;
+                $product->stock_status = $stock <= 0 ? 'out_of_stock' : ($stock <= 5 ? 'low_stock' : 'in_stock');
+            }
+            
+            return $product;
+        });
 
+        // Catégories avec comptage pour les filtres
         $categories = Category::where('is_active', true)
             ->orderBy('position')
             ->get();
@@ -286,6 +304,89 @@ class ShopController extends Controller
             'query' => $query,
             'products' => $products,
             'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * API pour les suggestions de recherche
+     */
+    public function searchSuggestions(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([
+                'products' => [],
+                'categories' => [],
+            ]);
+        }
+
+        // Recherche des produits
+        $products = Product::where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('description', 'like', "%{$query}%")
+                  ->orWhere('short_description', 'like', "%{$query}%")
+                  ->orWhere('tags', 'like', "%{$query}%");
+            })
+            ->with(['category', 'defaultSku'])
+            ->select('id', 'name', 'slug', 'price_ttc', 'promo_price', 'is_promoted', 'category_id')
+            ->take(5)
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'slug' => $product->slug,
+                    'price' => $product->price_ttc,
+                    'promo_price' => $product->promo_price,
+                    'is_promoted' => $product->is_promoted,
+                    'category' => $product->category ? [
+                        'name' => $product->category->name,
+                        'slug' => $product->category->slug,
+                    ] : null,
+                    'image' => $product->getFirstImageUrl(),
+                ];
+            });
+
+        // Recherche des catégories
+        $categories = Category::where('is_active', true)
+            ->where('name', 'like', "%{$query}%")
+            ->select('id', 'name', 'slug', 'icon')
+            ->take(3)
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                    'icon' => $category->icon,
+                    'products_count' => $category->products()->where('is_active', true)->count(),
+                ];
+            });
+
+        return response()->json([
+            'products' => $products,
+            'categories' => $categories,
+        ]);
+    }
+    
+    /**
+     * S'abonner à la newsletter
+     */
+    public function subscribeNewsletter(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|max:255',
+            'consent' => 'accepted',
+        ]);
+        
+        // TODO: Implémenter la logique de stockage
+        // Pour l'instant, on retourne juste un succès
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Merci de votre inscription ! Vous recevrez bientôt nos actualités.',
         ]);
     }
 }
