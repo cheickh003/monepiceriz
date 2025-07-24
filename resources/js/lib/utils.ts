@@ -5,7 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatPrice(price: number, currency: string = 'CFA'): string {
+export function formatPrice(price: number | null | undefined, currency: string = 'CFA'): string {
+  // Vérifier si le prix est valide
+  if (price === null || price === undefined || isNaN(price)) {
+    return 'Prix non disponible';
+  }
+  
   return new Intl.NumberFormat('fr-CI', {
     style: 'currency',
     currency: 'XOF',

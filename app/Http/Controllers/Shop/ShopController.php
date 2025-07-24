@@ -24,7 +24,9 @@ class ShopController extends Controller
             ->get();
 
         // Produits en vedette (featured)
-        $promotedProducts = Product::with(['category', 'defaultSku'])
+        $promotedProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where('is_featured', true)
             ->orderBy('id', 'desc')
@@ -32,14 +34,18 @@ class ShopController extends Controller
             ->get();
 
         // Nouveaux produits
-        $newProducts = Product::with(['category', 'defaultSku'])
+        $newProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->orderBy('created_at', 'desc')
             ->take(8)
             ->get();
 
         // Produits populaires (random pour l'instant)
-        $popularProducts = Product::with(['category', 'defaultSku'])
+        $popularProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->inRandomOrder()
             ->take(8)
@@ -65,7 +71,9 @@ class ShopController extends Controller
      */
     public function products(Request $request)
     {
-        $query = Product::with(['category', 'defaultSku'])
+        $query = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true);
 
         // Filtre par catégorie
@@ -110,7 +118,7 @@ class ShopController extends Controller
                 $query->orderBy('created_at', 'desc');
                 break;
             default:
-                $query->orderBy('position');
+                $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
         $products = $query->paginate(20);
@@ -154,7 +162,9 @@ class ShopController extends Controller
         ]);
 
         // Produits similaires
-        $relatedProducts = Product::with(['category', 'defaultSku'])
+        $relatedProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
@@ -176,7 +186,9 @@ class ShopController extends Controller
             abort(404);
         }
 
-        $query = Product::with(['category', 'defaultSku'])
+        $query = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where('category_id', $category->id);
 
@@ -212,7 +224,7 @@ class ShopController extends Controller
                 $query->orderBy('created_at', 'desc');
                 break;
             default:
-                $query->orderBy('position');
+                $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
         $products = $query->paginate(20);
@@ -253,7 +265,9 @@ class ShopController extends Controller
         }
 
         // Recherche dans les produits
-        $products = Product::with(['category', 'defaultSku'])
+        $products = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")

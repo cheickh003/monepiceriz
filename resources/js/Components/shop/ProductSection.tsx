@@ -15,6 +15,7 @@ interface Product {
   promo_price?: number
   is_promoted: boolean
   is_variable_weight: boolean
+  effective_price: number
   main_image?: string
   category: {
     name: string
@@ -45,7 +46,7 @@ export function ProductSection({ title, products, viewAllLink }: ProductSectionP
       skuId: product.default_sku.id,
       name: product.name,
       image: product.main_image,
-      price: product.is_promoted && product.promo_price ? product.promo_price : product.price_ttc,
+      price: product.effective_price || product.price_ttc || product.default_sku?.price_ttc || 0,
       isVariableWeight: product.is_variable_weight,
     })
   }
@@ -101,7 +102,7 @@ export function ProductSection({ title, products, viewAllLink }: ProductSectionP
 // Composant carte produit
 function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: () => void }) {
   const hasStock = product.default_sku && product.default_sku.stock_quantity > 0
-  const currentPrice = product.is_promoted && product.promo_price ? product.promo_price : product.price_ttc
+  const currentPrice = product.effective_price || product.price_ttc || product.default_sku?.price_ttc || 0
 
   return (
     <Card className="group h-full flex flex-col">

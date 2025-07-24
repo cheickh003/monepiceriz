@@ -25,7 +25,7 @@ class CategoryFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->unique()->words(2, true);
+        $name = implode(' ', $this->faker->unique()->words(2));
         return [
             'name' => ucfirst($name),
             'slug' => Str::slug($name),

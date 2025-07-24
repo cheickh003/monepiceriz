@@ -26,38 +26,35 @@ class ProductFactory extends Factory
      */
     public function definition(): array
     {
-        $name = $this->faker->words(3, true);
-        $purchasePrice = $this->faker->randomFloat(2, 100, 10000);
-        $margin = $this->faker->randomFloat(2, 1.1, 1.5); // 10% to 50% margin
+        $name = implode(' ', $this->faker->words(3));
         
         return [
+            'category_id' => Category::factory(),
             'name' => ucfirst($name),
             'slug' => Str::slug($name),
             'description' => $this->faker->paragraph(),
-            'category_id' => Category::factory(),
-            'is_variable_weight' => $this->faker->boolean(30), // 30% chance of being variable weight
-            'min_weight' => $this->faker->boolean(30) ? $this->faker->randomFloat(2, 0.1, 1) : null,
-            'price_per_kg' => $this->faker->boolean(30) ? $this->faker->randomFloat(2, 1000, 50000) : null,
-            'purchase_price' => $purchasePrice,
-            'price_ht' => $purchasePrice * $margin,
-            'price_ttc' => $purchasePrice * $margin, // No tax in CI
-            'is_promoted' => $this->faker->boolean(20), // 20% chance of being promoted
-            'promo_price' => null,
+            'brand' => $this->faker->optional(0.7)->company(),
+            'reference' => $this->faker->optional(0.8)->regexify('[A-Z]{2}[0-9]{4}'),
+            'barcode' => $this->faker->optional(0.6)->ean13(),
+            'main_image' => null, // Images will be handled separately
+            'gallery_images' => null,
             'is_active' => $this->faker->boolean(90), // 90% chance of being active
-            'position' => $this->faker->numberBetween(0, 100),
-            'views_count' => $this->faker->numberBetween(0, 1000),
+            'is_featured' => $this->faker->boolean(20), // 20% chance of being featured
+            'is_variable_weight' => $this->faker->boolean(30), // 30% chance of being variable weight
+            'meta_title' => $this->faker->optional(0.5)->sentence(6),
+            'meta_description' => $this->faker->optional(0.5)->text(160),
+            'meta_keywords' => $this->faker->optional(0.4)->randomElements(['riz', 'épices', 'bio', 'qualité', 'cuisine', 'africain', 'naturel'], 5),
         ];
     }
 
     /**
-     * Indicate that the product is on promotion.
+     * Indicate that the product is featured.
      */
-    public function promoted(): Factory
+    public function featured(): Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'is_promoted' => true,
-                'promo_price' => $attributes['price_ttc'] * 0.8, // 20% discount
+                'is_featured' => true,
             ];
         });
     }
@@ -70,8 +67,6 @@ class ProductFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'is_variable_weight' => true,
-                'min_weight' => $this->faker->randomFloat(2, 0.1, 1),
-                'price_per_kg' => $this->faker->randomFloat(2, 1000, 50000),
             ];
         });
     }
@@ -84,6 +79,33 @@ class ProductFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'is_active' => false,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the product has complete metadata.
+     */
+    public function withMetadata(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'meta_title' => $this->faker->sentence(8),
+                'meta_description' => $this->faker->text(155),
+                'meta_keywords' => $this->faker->randomElements(['riz', 'épices', 'bio', 'qualité', 'cuisine', 'africain', 'naturel', 'frais'], 8),
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the product has a reference and barcode.
+     */
+    public function withIdentifiers(): Factory
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'reference' => $this->faker->regexify('[A-Z]{2}[0-9]{6}'),
+                'barcode' => $this->faker->ean13(),
             ];
         });
     }
