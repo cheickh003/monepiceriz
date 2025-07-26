@@ -24,10 +24,18 @@ export function BottomNavigation() {
       const saved = localStorage.getItem('favoriteProducts')
       if (saved) {
         const favorites = JSON.parse(saved)
-        setFavoriteCount(favorites.length)
+        if (Array.isArray(favorites)) {
+          setFavoriteCount(favorites.length)
+        } else {
+          console.warn('Invalid favorites data, resetting')
+          localStorage.removeItem('favoriteProducts')
+          setFavoriteCount(0)
+        }
       }
     } catch (error) {
       console.error('Error loading favorites:', error)
+      localStorage.removeItem('favoriteProducts')
+      setFavoriteCount(0)
     }
   }, [])
 

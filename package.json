@@ -3,7 +3,9 @@
     "type": "module",
     "scripts": {
         "build": "tsc && vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "check:symbols": "grep -r 'Symbol\\|asChild' resources/js --include='*.tsx' --include='*.ts' | grep -v 'toString()' || echo 'No unsafe Symbol usage found'",
+        "debug:symbols": "NODE_ENV=development vite"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",

@@ -106,11 +106,11 @@ export const FILTER_OPTIONS = {
     { value: 'bestsellers', label: 'Meilleures ventes' },
   ],
   priceRanges: [
-    { min: 0, max: 10, label: 'Moins de 10€' },
-    { min: 10, max: 25, label: '10€ - 25€' },
-    { min: 25, max: 50, label: '25€ - 50€' },
-    { min: 50, max: 100, label: '50€ - 100€' },
-    { min: 100, max: null, label: 'Plus de 100€' },
+    { min: 0, max: 5000, label: 'Moins de 5 000 CFA' },
+    { min: 5000, max: 15000, label: '5 000 - 15 000 CFA' },
+    { min: 15000, max: 30000, label: '15 000 - 30 000 CFA' },
+    { min: 30000, max: 50000, label: '30 000 - 50 000 CFA' },
+    { min: 50000, max: null, label: 'Plus de 50 000 CFA' },
   ],
   ratings: [5, 4, 3, 2, 1],
 };
@@ -188,8 +188,8 @@ export const THRESHOLDS = {
     critical: 2,
   },
   freeShipping: {
-    amount: 50,
-    currency: '€',
+    amount: 25000,
+    currency: 'CFA',
   },
   newProduct: {
     days: 30,
@@ -203,7 +203,7 @@ export const THRESHOLDS = {
 // Configuration des métadonnées SEO par défaut
 export const DEFAULT_SEO = {
   title: 'MonEpice&Riz - Votre épicerie en ligne de confiance',
-  description: 'Découvrez une large sélection de produits frais, épices et aliments de qualité. Livraison rapide et gratuite dès 50€.',
+  description: 'Découvrez une large sélection de produits frais, épices et aliments de qualité. Livraison rapide et gratuite dès 25 000 CFA.',
   keywords: 'épicerie en ligne, produits frais, épices, livraison rapide, alimentation',
   ogImage: '/images/og-image.jpg',
   twitterCard: 'summary_large_image',
@@ -211,8 +211,8 @@ export const DEFAULT_SEO = {
 
 // Configuration des formats de prix et devises
 export const CURRENCY_CONFIG = {
-  code: 'EUR',
-  symbol: '€',
+  code: 'XOF',
+  symbol: 'CFA',
   position: 'after', // 'before' or 'after'
   decimals: 2,
   thousandsSeparator: ' ',

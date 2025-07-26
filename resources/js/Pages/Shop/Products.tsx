@@ -7,32 +7,9 @@ import AdvancedFilters from '@/Components/shop/AdvancedFilters'
 import BreadcrumbNavigation, { generateBreadcrumbs } from '@/Components/shop/BreadcrumbNavigation'
 import QuickViewModal from '@/Components/shop/QuickViewModal'
 import { Button } from '@/Components/ui/button'
-import { LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react'
-
-interface Category {
-  id: number
-  name: string
-  slug: string
-}
-
-interface Product {
-  id: number
-  name: string
-  slug: string
-  price_ttc: number
-  promo_price?: number
-  is_promoted: boolean
-  effective_price: number
-  is_variable_weight: boolean
-  main_image?: string
-  category: Category
-  default_sku?: {
-    id: number
-    sku: string
-    price_ttc: number
-    stock_quantity: number
-  }
-}
+import { LayoutGrid, List, ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { Product, Category, PaginatedResponse } from '@/types'
+import { formatPrice } from '@/lib/utils'
 
 interface Filters {
   category?: number
@@ -48,13 +25,7 @@ interface Filters {
 }
 
 interface ProductsPageProps {
-  products: {
-    data: Product[]
-    current_page: number
-    last_page: number
-    per_page: number
-    total: number
-  }
+  products: PaginatedResponse<Product>
   categories: Category[]
   filters: Filters
 }
@@ -188,7 +159,9 @@ export default function Products({ products, categories, filters }: ProductsPage
                         {product.name}
                       </h3>
                     </Link>
-                    <p className="text-sm text-gray-600">{product.category.name}</p>
+                    {product.category && (
+                      <p className="text-sm text-gray-600">{product.category.name}</p>
+                    )}
                   </div>
                   
                   <div className="flex items-center justify-between mt-2">

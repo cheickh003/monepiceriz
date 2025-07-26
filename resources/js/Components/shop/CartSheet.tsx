@@ -1,5 +1,5 @@
 import { useCart } from '@/contexts/CartContext'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Link } from '@inertiajs/react'
@@ -12,7 +12,7 @@ export function CartSheet() {
       <div className="flex flex-col items-center justify-center h-full py-8">
         <p className="text-gray-500 mb-4">Votre panier est vide</p>
         <Link href="/">
-          <Button>Continuer vos achats</Button>
+          <SafeButton>Continuer vos achats</SafeButton>
         </Link>
       </div>
     )
@@ -37,13 +37,8 @@ export function CartSheet() {
               {/* Détails */}
               <div className="flex-1">
                 <h4 className="font-medium text-sm">{item.product.name}</h4>
-                {item.product.weight && (
-                  <p className="text-xs text-gray-500">
-                    {item.product.weight >= 1 ? `${item.product.weight} kg` : `${item.product.weight * 1000} g`}
-                  </p>
-                )}
                 <p className="text-sm font-semibold mt-1">
-                  {formatPrice(item.product.is_promoted && item.product.promo_price ? item.product.promo_price : item.product.price_ttc)}
+                  {formatPrice(item.product.effective_price || item.product.price_ttc || 0)}
                 </p>
               </div>
 
@@ -99,9 +94,9 @@ export function CartSheet() {
 
         {/* Bouton checkout */}
         <Link href="/checkout" className="block">
-          <Button className="w-full" size="lg">
+          <SafeButton className="w-full" size="lg">
             Passer la commande ({formatPrice(totalAmount)})
-          </Button>
+          </SafeButton>
         </Link>
       </div>
     </div>

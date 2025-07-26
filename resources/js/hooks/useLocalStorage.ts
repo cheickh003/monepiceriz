@@ -146,7 +146,7 @@ export function useUserPreferences() {
   const [preferences, setPreferences] = useLocalStorage('userPreferences', {
     viewMode: 'grid' as 'grid' | 'list',
     favoriteFilters: [] as string[],
-    currency: 'EUR',
+    currency: 'XOF',
     language: 'fr',
   });
 

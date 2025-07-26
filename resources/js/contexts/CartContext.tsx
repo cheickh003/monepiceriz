@@ -34,28 +34,79 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   // Charger le panier depuis localStorage au montage
   useEffect(() => {
-    const savedCart = localStorage.getItem(CART_STORAGE_KEY)
-    if (savedCart) {
-      try {
+    try {
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY)
+      if (savedCart) {
         const parsedCart = JSON.parse(savedCart)
-        setItems(parsedCart)
-      } catch (error) {
-        console.error('Erreur lors du chargement du panier:', error)
+        // Validate cart structure and clear if corrupted
+        if (Array.isArray(parsedCart)) {
+          const validItems = parsedCart.filter((item) => {
+            try {
+              return (
+                item &&
+                typeof item === 'object' &&
+                typeof item.id === 'number' &&
+                item.product &&
+                typeof item.product === 'object' &&
+                typeof item.quantity === 'number' &&
+                item.quantity > 0
+              )
+            } catch (e) {
+              console.error('Invalid cart item found:', e)
+              return false
+            }
+          })
+          setItems(validItems)
+          // Update localStorage if we filtered out invalid items
+          if (validItems.length !== parsedCart.length) {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(validItems))
+          }
+        } else {
+          // Clear corrupted cart data
+          console.warn('Corrupted cart data found, clearing cart')
+          localStorage.removeItem(CART_STORAGE_KEY)
+          setItems([])
+        }
       }
+    } catch (error) {
+      console.error('Erreur lors du chargement du panier:', error)
+      // Clear corrupted data and start fresh
+      localStorage.removeItem(CART_STORAGE_KEY)
+      setItems([])
+      toast({
+        title: "Erreur",
+        description: "Le panier a été réinitialisé suite à une erreur.",
+        variant: "destructive",
+      })
     }
   }, [])
 
   // Sauvegarder le panier dans localStorage à chaque changement
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
-    // Dispatch event for cross-tab synchronization
-    window.dispatchEvent(new CustomEvent(CART_SYNC_EVENT, { detail: items }))
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+      // Dispatch event for cross-tab synchronization
+      window.dispatchEvent(new CustomEvent(CART_SYNC_EVENT, { detail: items }))
+    } catch (error) {
+      console.error('Error saving cart to localStorage:', error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder le panier.",
+        variant: "destructive",
+      })
+    }
   }, [items])
 
   // Listen for cart updates from other tabs
   useEffect(() => {
     const handleCartSync = (event: CustomEvent) => {
-      setItems(event.detail)
+      try {
+        if (event.detail && Array.isArray(event.detail)) {
+          setItems(event.detail)
+        }
+      } catch (error) {
+        console.error('Error syncing cart:', error)
+      }
     }
 
     window.addEventListener(CART_SYNC_EVENT as any, handleCartSync)
@@ -65,42 +116,60 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const addToCart = (product: Product, quantity: number = 1, options?: Record<string, string>) => {
-    setItems(prevItems => {
-      const existingItemIndex = prevItems.findIndex(
-        item => item.id === product.id && 
-        JSON.stringify(item.selectedOptions) === JSON.stringify(options)
-      )
-
-      if (existingItemIndex > -1) {
-        // Update quantity if item already exists
-        const updatedItems = [...prevItems]
-        updatedItems[existingItemIndex].quantity += quantity
-        
+    try {
+      if (!product || !product.id) {
         toast({
-          title: "Quantité mise à jour",
-          description: `${product.name} - Quantité: ${updatedItems[existingItemIndex].quantity}`,
-          variant: "success",
+          title: "Erreur",
+          description: "Produit invalide",
+          variant: "destructive",
         })
-        
-        return updatedItems
-      } else {
-        // Add new item
-        const newItem: CartItem = {
-          id: product.id,
-          product,
-          quantity,
-          selectedOptions: options,
-        }
-        
-        toast({
-          title: "Ajouté au panier",
-          description: `${product.name} a été ajouté au panier`,
-          variant: "success",
-        })
-        
-        return [...prevItems, newItem]
+        return
       }
-    })
+
+      setItems(prevItems => {
+        const existingItemIndex = prevItems.findIndex(
+          item => item.id === product.id && 
+          JSON.stringify(item.selectedOptions) === JSON.stringify(options)
+        )
+
+        if (existingItemIndex > -1) {
+          // Update quantity if item already exists
+          const updatedItems = [...prevItems]
+          updatedItems[existingItemIndex].quantity += quantity
+          
+          toast({
+            title: "Quantité mise à jour",
+            description: `${product.name || 'Produit'} - Quantité: ${updatedItems[existingItemIndex].quantity}`,
+            variant: "success",
+          })
+          
+          return updatedItems
+        } else {
+          // Add new item
+          const newItem: CartItem = {
+            id: product.id,
+            product,
+            quantity,
+            selectedOptions: options,
+          }
+          
+          toast({
+            title: "Ajouté au panier",
+            description: `${product.name || 'Produit'} a été ajouté au panier`,
+            variant: "success",
+          })
+          
+          return [...prevItems, newItem]
+        }
+      })
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le produit au panier",
+        variant: "destructive",
+      })
+    }
   }
 
   const removeFromCart = (productId: number) => {
@@ -147,13 +216,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return items.find(item => item.id === productId)
   }
 
-  // Calculate totals
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0)
+  // Calculate totals with error handling
+  const itemCount = items.reduce((total, item) => {
+    try {
+      return total + (item.quantity || 0)
+    } catch (e) {
+      console.error('Error calculating item count:', e)
+      return total
+    }
+  }, 0)
+  
   const totalAmount = items.reduce((total, item) => {
-    const price = item.product.is_promoted && item.product.promo_price 
-      ? item.product.promo_price 
-      : item.product.price_ttc
-    return total + (price * item.quantity)
+    try {
+      const price = item.product?.effective_price || item.product?.price_ttc || 0
+      return total + (price * (item.quantity || 0))
+    } catch (e) {
+      console.error('Error calculating total amount:', e)
+      return total
+    }
   }, 0)
 
   return (

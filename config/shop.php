@@ -17,13 +17,24 @@ return [
     */
     'store' => [
         'name' => env('SHOP_STORE_NAME', 'MonEpice&Riz'),
-        'address' => env('SHOP_STORE_ADDRESS', 'Abidjan, Côte d\'Ivoire'),
+        'address' => env('SHOP_STORE_ADDRESS', 'Allocodrome non loin de l\'école, Av. Jean Mermoz, Abidjan'),
         'phone' => env('SHOP_STORE_PHONE', '+225XXXXXXXXXX'),
         'email' => env('SHOP_STORE_EMAIL', 'contact@monepiceriz.com'),
         'timezone' => env('SHOP_TIMEZONE', 'Africa/Abidjan'),
         'currency' => env('SHOP_CURRENCY', 'XOF'),
         'currency_symbol' => 'F CFA',
         'locale' => 'fr_CI',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Contact Information
+    |--------------------------------------------------------------------------
+    */
+    'contact' => [
+        'phone' => env('SHOP_CONTACT_PHONE', '+225 07 00 00 00 00'),
+        'whatsapp' => env('SHOP_CONTACT_WHATSAPP', '+225 07 00 00 00 00'),
+        'email' => env('SHOP_CONTACT_EMAIL', 'contact@monepiceriz.ci'),
     ],
 
     /*
@@ -50,6 +61,41 @@ return [
             '16:00-18:00',
             '18:00-20:00',
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Delivery Settings
+    |--------------------------------------------------------------------------
+    */
+    'delivery' => [
+        'default_fee' => env('SHOP_DEFAULT_DELIVERY_FEE', 1500),
+        'zones' => [
+            'cocody' => ['name' => 'Cocody', 'base_fee' => 1000],
+            'plateau' => ['name' => 'Plateau', 'base_fee' => 1500],
+            'marcory' => ['name' => 'Marcory', 'base_fee' => 2000],
+            'yopougon' => ['name' => 'Yopougon', 'base_fee' => 2500],
+            'abobo' => ['name' => 'Abobo', 'base_fee' => 2500],
+            'adjame' => ['name' => 'Adjamé', 'base_fee' => 2000],
+            'treichville' => ['name' => 'Treichville', 'base_fee' => 2000],
+            'koumassi' => ['name' => 'Koumassi', 'base_fee' => 2500],
+            'port-bouet' => ['name' => 'Port-Bouët', 'base_fee' => 3000],
+            'attécoubé' => ['name' => 'Attécoubé', 'base_fee' => 2500],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pickup Settings
+    |--------------------------------------------------------------------------
+    */
+    'pickup' => [
+        'time_slots' => [
+            '09:00-12:00' => 'Matin (9h - 12h)',
+            '14:00-17:00' => 'Après-midi (14h - 17h)',
+            '17:00-20:00' => 'Soir (17h - 20h)',
+        ],
+        'preparation_time' => 2, // heures minimum pour préparer une commande
     ],
 
     /*
@@ -87,6 +133,7 @@ return [
     'variable_weight' => [
         'categories' => ['boucherie', 'poissonnerie'], // Slugs des catégories concernées
         'estimation_margin' => 1.2, // Marge de 20% pour la pré-autorisation
+        'tolerance_percent' => 20, // Tolérance en % pour la différence de poids
         'units' => [
             'display' => 'kg', // Unité d'affichage
             'storage' => 'g', // Unité de stockage en base
@@ -159,9 +206,81 @@ return [
             'email' => true,
             'sms' => false, // Pour v2
         ],
+        'order_processing' => [
+            'email' => true,
+            'sms' => false,
+        ],
+        'order_delivered' => [
+            'email' => true,
+            'sms' => false,
+        ],
         'low_stock_alert' => [
             'email' => true,
             'threshold' => 10,
+        ],
+        'admin_new_order' => [
+            'email' => true,
+            'recipients' => env('SHOP_ADMIN_EMAILS', ''), // Emails séparés par des virgules
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Settings
+    |--------------------------------------------------------------------------
+    */
+    'payment' => [
+        'methods' => [
+            'cash' => [
+                'enabled' => true,
+                'label' => 'Paiement à la livraison',
+                'description' => 'Payez en espèces lors de la livraison ou du retrait',
+            ],
+            'card' => [
+                'enabled' => true,
+                'label' => 'Paiement par carte',
+                'description' => 'Visa, Mastercard, Orange Money, Wave',
+                'provider' => 'cinetpay',
+            ],
+        ],
+        'pre_authorization' => [
+            'enabled' => true,
+            'margin_percent' => 20, // Marge pour les produits à poids variable
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Settings
+    |--------------------------------------------------------------------------
+    */
+    'admin' => [
+        'pagination' => [
+            'orders' => 20,
+            'products' => 50,
+            'customers' => 50,
+        ],
+        'export' => [
+            'formats' => ['csv', 'xlsx'],
+            'max_rows' => 10000,
+        ],
+        'dashboard' => [
+            'refresh_interval' => 300, // secondes
+            'metrics_period' => 30, // jours
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Settings
+    |--------------------------------------------------------------------------
+    */
+    'security' => [
+        'order_access_duration' => 7, // jours - durée d'accès aux commandes pour les clients non connectés
+        'webhook_timeout' => 30, // secondes
+        'rate_limits' => [
+            'checkout' => 10, // max tentatives par heure
+            'api' => 60, // max requêtes API par minute
         ],
     ],
 ];

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
-import { Button } from '@/Components/ui/button';
+import SafeButton from '@/Components/SafeButton';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
 
@@ -77,7 +77,7 @@ export default function NewsletterSection({ className }: NewsletterSectionProps)
                                 disabled={status === 'loading' || status === 'success'}
                                 aria-label="Adresse email pour la newsletter"
                             />
-                            <Button
+                            <SafeButton
                                 type="submit"
                                 size="lg"
                                 disabled={status === 'loading' || status === 'success'}
@@ -91,7 +91,7 @@ export default function NewsletterSection({ className }: NewsletterSectionProps)
                                 ) : (
                                     "S'inscrire"
                                 )}
-                            </Button>
+                            </SafeButton>
                         </div>
                     </form>
 

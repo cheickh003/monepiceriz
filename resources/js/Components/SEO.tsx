@@ -1,4 +1,12 @@
 import { Head } from '@inertiajs/react'
+import { safePriceToString, isValidPrice, safeStringify } from '@/lib/utils'
+
+// Convertit n'importe quelle valeur potentiellement Symbol en chaîne
+function safeMetaValue(value: any): string {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'symbol') return value.toString()
+  return String(value)
+}
 
 interface SEOProps {
   title: string
@@ -28,22 +36,32 @@ export function SEO({
   category
 }: SEOProps) {
   const siteName = 'MonEpice&Riz'
-  const fullTitle = `${title} | ${siteName}`
+  // Garantir que toutes les valeurs passées dans <Head> sont sûres
+  const safeTitle = safeMetaValue(title)
+  const safeDescription = safeMetaValue(description)
+  const safeKeywords = safeMetaValue(keywords)
+  const safeImage = safeMetaValue(image)
+  const safeType = safeMetaValue(type)
+  const safeBrand = safeMetaValue(brand)
+  const safeAvailability = safeMetaValue(availability)
+  const safeCategory = category ? safeMetaValue(category) : undefined
+
+  const fullTitle = `${safeTitle} | ${siteName}`
   const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : '')
 
   return (
     <Head>
       {/* Basic Meta Tags */}
       <title>{fullTitle}</title>
-      <meta name="description" content={description} />
-      <meta name="keywords" content={keywords} />
+      <meta name="description" content={safeDescription} />
+      <meta name="keywords" content={safeKeywords} />
       
       {/* Open Graph / Facebook */}
-      <meta property="og:type" content={type} />
+      <meta property="og:type" content={safeType} />
       <meta property="og:url" content={currentUrl} />
       <meta property="og:title" content={fullTitle} />
-      <meta property="og:description" content={description} />
-      <meta property="og:image" content={image} />
+      <meta property="og:description" content={safeDescription} />
+      <meta property="og:image" content={safeImage} />
       <meta property="og:site_name" content={siteName} />
       <meta property="og:locale" content="fr_CI" />
       
@@ -51,17 +69,17 @@ export function SEO({
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={currentUrl} />
       <meta name="twitter:title" content={fullTitle} />
-      <meta name="twitter:description" content={description} />
-      <meta name="twitter:image" content={image} />
+      <meta name="twitter:description" content={safeDescription} />
+      <meta name="twitter:image" content={safeImage} />
       
       {/* Product specific meta tags */}
-      {type === 'product' && (
+      {safeType === 'product' && isValidPrice(price) && (
         <>
-          <meta property="product:price:amount" content={String(price)} />
+          <meta property="product:price:amount" content={safePriceToString(price)} />
           <meta property="product:price:currency" content={currency} />
-          <meta property="product:availability" content={availability} />
-          <meta property="product:brand" content={brand} />
-          {category && <meta property="product:category" content={category} />}
+          <meta property="product:availability" content={safeAvailability} />
+          <meta property="product:brand" content={safeBrand} />
+          {safeCategory && <meta property="product:category" content={safeCategory} />}
         </>
       )}
       
@@ -77,31 +95,31 @@ export function SEO({
       <meta httpEquiv="content-language" content="fr" />
       
       {/* Structured Data for Products */}
-      {type === 'product' && price && (
+      {safeType === 'product' && isValidPrice(price) && (
         <script type="application/ld+json">
-          {JSON.stringify({
+          {safeStringify({
             "@context": "https://schema.org/",
             "@type": "Product",
-            "name": title,
-            "description": description,
-            "image": image,
+            "name": safeTitle,
+            "description": safeDescription,
+            "image": safeImage,
             "brand": {
               "@type": "Brand",
-              "name": brand
+              "name": safeBrand
             },
             "offers": {
               "@type": "Offer",
               "url": currentUrl,
               "priceCurrency": currency,
               "price": price,
-              "availability": `https://schema.org/${availability === 'in stock' ? 'InStock' : 'OutOfStock'}`
+              "availability": `https://schema.org/${safeAvailability === 'in stock' ? 'InStock' : 'OutOfStock'}`
             }
           })}
         </script>
       )}
       
       {/* Structured Data for Website */}
-      {type === 'website' && (
+      {safeType === 'website' && (
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",

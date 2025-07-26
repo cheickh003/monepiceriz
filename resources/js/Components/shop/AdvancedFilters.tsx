@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Filter, X, ChevronDown, Star, Package } from 'lucide-react';
-import { Button } from '@/Components/ui/button';
+import SafeButton from '@/Components/SafeButton';
 import { Slider } from '@/Components/ui/slider';
 import {
     Sheet,
@@ -85,7 +85,7 @@ export default function AdvancedFilters({
         // Update URL params
         const params = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
-            if (value && value !== 0 && value !== '' && value !== false) {
+            if (value !== undefined && value !== null && value !== 0 && value !== '' && value !== false) {
                 params.set(key, String(value));
             }
         });
@@ -159,11 +159,11 @@ export default function AdvancedFilters({
                         aria-valuemin={0}
                         aria-valuemax={100}
                         aria-valuenow={priceRange.max}
-                        aria-valuetext={`Prix entre ${priceRange.min}€ et ${priceRange.max}€`}
+                        aria-valuetext={`Prix entre ${priceRange.min} CFA et ${priceRange.max} CFA`}
                     />
                     <div className="flex justify-between text-sm text-gray-600" aria-live="polite">
-                        <span>{priceRange.min}€</span>
-                        <span>{priceRange.max}€</span>
+                        <span>{priceRange.min} CFA</span>
+                        <span>{priceRange.max} CFA</span>
                     </div>
                 </div>
             </div>
@@ -317,7 +317,7 @@ export default function AdvancedFilters({
 
                     {/* Quick Filters */}
                     <div className="flex items-center gap-2">
-                        <Button
+                        <SafeButton
                             variant={inStockOnly ? "default" : "outline"}
                             size="sm"
                             onClick={() => setInStockOnly(!inStockOnly)}
@@ -327,8 +327,8 @@ export default function AdvancedFilters({
                         >
                             <Package className="w-4 h-4" aria-hidden="true" />
                             En stock
-                        </Button>
-                        <Button
+                        </SafeButton>
+                        <SafeButton
                             variant={onSaleOnly ? "default" : "outline"}
                             size="sm"
                             onClick={() => setOnSaleOnly(!onSaleOnly)}
@@ -336,13 +336,13 @@ export default function AdvancedFilters({
                             aria-label="Filtrer les produits en promotion uniquement"
                         >
                             En promotion
-                        </Button>
+                        </SafeButton>
                     </div>
 
                     {/* More Filters Button */}
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
-                            <Button 
+                            <SafeButton 
                                 variant="outline" 
                                 size="sm" 
                                 className="gap-2"
@@ -355,7 +355,7 @@ export default function AdvancedFilters({
                                         {activeFiltersCount}
                                     </span>
                                 )}
-                            </Button>
+                            </SafeButton>
                         </SheetTrigger>
                         <SheetContent>
                             <SheetHeader>
@@ -367,20 +367,20 @@ export default function AdvancedFilters({
                             <div className="mt-6">
                                 {FiltersContent()}
                                 <div className="mt-6 space-y-2">
-                                    <Button
+                                    <SafeButton
                                         onClick={() => setIsOpen(false)}
                                         className="w-full"
                                     >
                                         Appliquer les filtres
-                                    </Button>
-                                    <Button
+                                    </SafeButton>
+                                    <SafeButton
                                         variant="outline"
                                         onClick={clearAllFilters}
                                         className="w-full"
                                         aria-label="Effacer tous les filtres appliqués"
                                     >
                                         Effacer les filtres
-                                    </Button>
+                                    </SafeButton>
                                 </div>
                             </div>
                         </SheetContent>
@@ -393,7 +393,7 @@ export default function AdvancedFilters({
                         {productCount} résultat{productCount > 1 ? 's' : ''}
                     </span>
                     {activeFiltersCount > 0 && (
-                        <Button
+                        <SafeButton
                             variant="ghost"
                             size="sm"
                             onClick={clearAllFilters}
@@ -402,7 +402,7 @@ export default function AdvancedFilters({
                         >
                             <X className="w-4 h-4" aria-hidden="true" />
                             Effacer
-                        </Button>
+                        </SafeButton>
                     )}
                 </div>
             </div>
@@ -424,7 +424,7 @@ export default function AdvancedFilters({
 
                 <Sheet open={isOpen} onOpenChange={setIsOpen}>
                     <SheetTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <SafeButton variant="outline" size="sm" className="gap-2">
                             <Filter className="w-4 h-4" />
                             Filtres
                             {activeFiltersCount > 0 && (
@@ -432,7 +432,7 @@ export default function AdvancedFilters({
                                     {activeFiltersCount}
                                 </span>
                             )}
-                        </Button>
+                        </SafeButton>
                     </SheetTrigger>
                     <SheetContent side="bottom" className="h-[80vh]">
                         <SheetHeader>
@@ -444,19 +444,19 @@ export default function AdvancedFilters({
                         <div className="mt-6 overflow-y-auto max-h-[60vh]">
                             {FiltersContent()}
                             <div className="mt-6 space-y-2 sticky bottom-0 bg-white pt-4">
-                                <Button
+                                <SafeButton
                                     onClick={() => setIsOpen(false)}
                                     className="w-full"
                                 >
                                     Voir les résultats
-                                </Button>
-                                <Button
+                                </SafeButton>
+                                <SafeButton
                                     variant="outline"
                                     onClick={clearAllFilters}
                                     className="w-full"
                                 >
                                     Effacer les filtres
-                                </Button>
+                                </SafeButton>
                             </div>
                         </div>
                     </SheetContent>

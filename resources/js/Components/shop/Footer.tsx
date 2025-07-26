@@ -51,20 +51,21 @@ export default function Footer() {
                             <div className="flex items-start gap-3">
                                 <MapPin className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="text-sm">123 Rue du Commerce</p>
-                                    <p className="text-sm">75001 Paris, France</p>
+                                    <p className="text-sm">Allocodrome non loin de l'école</p>
+                                    <p className="text-sm">Av. Jean Mermoz, Abidjan</p>
+                                    <p className="text-sm">Côte d'Ivoire</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Phone className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                <a href="tel:+33123456789" className="text-sm hover:text-white transition-colors">
-                                    +33 1 23 45 67 89
+                                <a href="tel:+2252720123456" className="text-sm hover:text-white transition-colors">
+                                    +225 27 20 12 34 56
                                 </a>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Mail className="w-5 h-5 text-green-500 flex-shrink-0" />
-                                <a href="mailto:contact@monepiceriz.fr" className="text-sm hover:text-white transition-colors">
-                                    contact@monepiceriz.fr
+                                <a href="mailto:contact@monepiceriz.ci" className="text-sm hover:text-white transition-colors">
+                                    contact@monepiceriz.ci
                                 </a>
                             </div>
                             <div className="flex items-start gap-3">

@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Shop\ShopController;
+use App\Http\Controllers\Shop\CheckoutController;
+use App\Http\Controllers\Webhook\CinetPayController;
+use App\Http\Controllers\Admin\OrderController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,6 +28,27 @@ Route::get('/menu', function () {
 
 // Newsletter
 Route::post('/newsletter/subscribe', [ShopController::class, 'subscribeNewsletter'])->name('newsletter.subscribe');
+
+// Checkout routes
+Route::prefix('shop')->name('shop.')->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/calculate-delivery-fee', [CheckoutController::class, 'calculateDeliveryFee'])->name('checkout.calculate-fee');
+    
+    // Order status pages
+    Route::get('/order/success/{order}', [CheckoutController::class, 'success'])->name('order.success');
+    Route::get('/order/failed', [CheckoutController::class, 'failed'])->name('order.failed');
+    Route::get('/order/pending', [CheckoutController::class, 'pending'])->name('order.pending');
+    Route::post('/order/{order}/retry-payment', [CheckoutController::class, 'retryPayment'])->name('order.retry-payment');
+});
+
+// Webhook routes (no CSRF protection)
+Route::post('/webhooks/cinetpay', [CinetPayController::class, 'handle'])
+    ->name('webhooks.cinetpay')
+    ->withoutMiddleware(['web']);
+    
+Route::post('/webhooks/cinetpay/check-status', [CinetPayController::class, 'checkStatus'])
+    ->name('webhooks.cinetpay.check-status');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
@@ -58,6 +82,16 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('product-attributes', \App\Http\Controllers\Admin\ProductAttributeController::class);
     Route::post('product-attributes/{productAttribute}/values', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'addValue'])
         ->name('product-attributes.add-value');
+    
+    // Orders management
+    Route::resource('orders', OrderController::class)->only(['index', 'show']);
+    Route::get('orders/dashboard', [OrderController::class, 'dashboard'])->name('orders.dashboard');
+    Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::patch('orders/{order}/weights', [OrderController::class, 'updateWeights'])->name('orders.update-weights');
+    Route::post('orders/{order}/capture', [OrderController::class, 'capturePayment'])->name('orders.capture-payment');
+    Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
+    Route::get('orders/{order}/print', [OrderController::class, 'print'])->name('orders.print');
+    Route::get('orders/export', [OrderController::class, 'export'])->name('orders.export');
 });
 
 require __DIR__.'/auth.php';

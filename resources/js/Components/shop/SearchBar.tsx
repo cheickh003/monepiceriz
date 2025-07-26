@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, X, Clock, TrendingUp } from 'lucide-react';
 import { router } from '@inertiajs/react';
-import { Button } from '@/Components/ui/button';
+import SafeButton from '@/Components/SafeButton';
 import { cn } from '@/lib/utils';
 import { toast } from '@/Components/ui/use-toast';
 
@@ -33,9 +33,17 @@ export function SearchBar({
 
     // Load recent searches from localStorage
     useEffect(() => {
-        const recent = localStorage.getItem('recentSearches');
-        if (recent) {
-            setRecentSearches(JSON.parse(recent));
+        try {
+            const recent = localStorage.getItem('recentSearches');
+            if (recent) {
+                const parsed = JSON.parse(recent);
+                if (Array.isArray(parsed)) {
+                    setRecentSearches(parsed);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading recent searches:', error);
+            setRecentSearches([]);
         }
     }, []);
 
@@ -66,44 +74,72 @@ export function SearchBar({
 
     // Fetch suggestions based on query
     useEffect(() => {
+        const abortController = new AbortController();
+        
         const fetchSuggestions = async () => {
-            if (query.length < 2) {
+            if (!query || query.trim().length < 2) {
                 setSuggestions([]);
                 return;
             }
 
             setLoading(true);
             try {
-                const response = await fetch(`/api/search-suggestions?q=${encodeURIComponent(query)}`);
-                if (!response.ok) {
-                    throw new Error('Erreur lors de la recherche');
-                }
-                const data = await response.json();
-                setSuggestions(data.suggestions || []);
-            } catch (error) {
-                console.error('Error fetching suggestions:', error);
-                setSuggestions([]);
-                toast({
-                    title: "Erreur de recherche",
-                    description: "Impossible de charger les suggestions. Veuillez réessayer.",
-                    variant: "destructive",
+                const response = await fetch(`/api/search-suggestions?q=${encodeURIComponent(query)}`, {
+                    signal: abortController.signal,
                 });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Validate response structure
+                if (data && Array.isArray(data.suggestions)) {
+                    setSuggestions(data.suggestions);
+                } else {
+                    console.warn('Invalid suggestions format:', data);
+                    setSuggestions([]);
+                }
+            } catch (error: any) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error fetching suggestions:', error);
+                    setSuggestions([]);
+                    // Only show toast for actual errors, not aborted requests
+                    if (error.message.includes('500') || error.message.includes('503')) {
+                        toast({
+                            title: "Erreur de recherche",
+                            description: "Le service de recherche est temporairement indisponible.",
+                            variant: "destructive",
+                        });
+                    }
+                }
             } finally {
-                setLoading(false);
+                if (!abortController.signal.aborted) {
+                    setLoading(false);
+                }
             }
         };
 
         const debounceTimer = setTimeout(fetchSuggestions, 300);
-        return () => clearTimeout(debounceTimer);
+        
+        return () => {
+            clearTimeout(debounceTimer);
+            abortController.abort();
+        };
     }, [query]);
 
     const handleSearch = (searchQuery: string = query) => {
         if (!searchQuery.trim()) return;
 
-        // Save to recent searches
-        const updatedRecent = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
-        setRecentSearches(updatedRecent);
-        localStorage.setItem('recentSearches', JSON.stringify(updatedRecent));
+        // Save to recent searches with error handling
+        try {
+            const updatedRecent = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
+            setRecentSearches(updatedRecent);
+            localStorage.setItem('recentSearches', JSON.stringify(updatedRecent));
+        } catch (error) {
+            console.error('Error saving recent searches:', error);
+        }
 
         // Navigate to search results
         router.visit(`/search?q=${encodeURIComponent(searchQuery)}`);
@@ -233,14 +269,14 @@ export function SearchBar({
                     </button>
                 )}
 
-                <Button
+                <SafeButton
                     onClick={() => handleSearch()}
                     size="sm"
                     className="absolute right-1 top-1/2 transform -translate-y-1/2 h-10 px-4 bg-green-600 hover:bg-green-700"
                     aria-label="Lancer la recherche"
                 >
                     <Search className="w-4 h-4" />
-                </Button>
+                </SafeButton>
 
                 <kbd className="hidden md:inline-flex absolute right-14 top-1/2 transform -translate-y-1/2 px-2 py-1 text-xs text-gray-500 bg-gray-100 rounded border border-gray-300">
                     ⌘K

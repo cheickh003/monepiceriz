@@ -31,7 +31,10 @@ class ShopController extends Controller
             ->where('is_featured', true)
             ->orderBy('id', 'desc')
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Nouveaux produits
         $newProducts = Product::with(['category', 'defaultSku' => function($query) {
@@ -40,7 +43,10 @@ class ShopController extends Controller
             ->where('is_active', true)
             ->orderBy('created_at', 'desc')
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Produits populaires (random pour l'instant)
         $popularProducts = Product::with(['category', 'defaultSku' => function($query) {
@@ -49,7 +55,10 @@ class ShopController extends Controller
             ->where('is_active', true)
             ->inRandomOrder()
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         return Inertia::render('Shop/Home', [
             'categories' => $categories,
@@ -81,12 +90,33 @@ class ShopController extends Controller
             $query->where('category_id', $request->category);
         }
 
-        // Filtre par prix
-        if ($request->has('min_price')) {
-            $query->where('price_ttc', '>=', $request->min_price);
+        // Filtre par prix (basé sur les SKUs par défaut)
+        $minPrice = null;
+        $maxPrice = null;
+
+        if ($request->filled('min_price')) {
+            $minPrice = (float)$request->min_price;
+        } elseif ($request->filled('price_min') && (float)$request->price_min > 0) {
+            $minPrice = (float)$request->price_min;
         }
-        if ($request->has('max_price')) {
-            $query->where('price_ttc', '<=', $request->max_price);
+
+        if ($request->filled('max_price')) {
+            $maxPrice = (float)$request->max_price;
+        } elseif ($request->filled('price_max') && (float)$request->price_max > 0) {
+            $maxPrice = (float)$request->price_max;
+        }
+
+        if ($minPrice !== null || $maxPrice !== null) {
+            $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
+                if ($minPrice !== null) {
+                    $q->where('price_ttc', '>=', $minPrice);
+                }
+                if ($maxPrice !== null) {
+                    $q->where('price_ttc', '<=', $maxPrice);
+                }
+                // Ne considérer que les SKUs par défaut pour la comparaison
+                $q->where('is_default', true);
+            });
         }
 
         // Filtre par promotion
@@ -122,8 +152,11 @@ class ShopController extends Controller
         }
 
         $products = $query->paginate(20)->through(function ($product) {
+            // Ensure product data is complete
+            $product = $this->ensureProductData($product);
+            
             // Ajouter des métadonnées pour chaque produit
-            if ($product->is_promoted && $product->promo_price) {
+            if ($product->is_promoted && $product->promo_price && $product->price_ttc) {
                 $product->savings = $product->price_ttc - $product->promo_price;
                 $product->savings_percentage = round((($product->price_ttc - $product->promo_price) / $product->price_ttc) * 100);
             }
@@ -133,7 +166,7 @@ class ShopController extends Controller
             
             // Indicateur de stock faible
             if ($product->defaultSku) {
-                $stock = $product->defaultSku->stock_quantity;
+                $stock = $product->defaultSku->stock_quantity ?? 0;
                 $product->stock_status = $stock <= 0 ? 'out_of_stock' : ($stock <= 5 ? 'low_stock' : 'in_stock');
             }
             
@@ -187,10 +220,13 @@ class ShopController extends Controller
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
             ->take(4)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         return Inertia::render('Shop/ProductDetail', [
-            'product' => $product,
+            'product' => $this->ensureProductData($product),
             'relatedProducts' => $relatedProducts,
         ]);
     }
@@ -245,7 +281,9 @@ class ShopController extends Controller
                 $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate(20);
+        $products = $query->paginate(20)->through(function ($product) {
+            return $this->ensureProductData($product);
+        });
 
         // Sous-catégories
         $subcategories = $category->children()
@@ -292,7 +330,10 @@ class ShopController extends Controller
                     ->orWhere('description', 'like', "%{$query}%");
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Recherche dans les catégories
         $categories = Category::where('is_active', true)
@@ -388,5 +429,35 @@ class ShopController extends Controller
             'success' => true,
             'message' => 'Merci de votre inscription ! Vous recevrez bientôt nos actualités.',
         ]);
+    }
+
+    /**
+     * Ensure product data is complete for frontend
+     */
+    private function ensureProductData($product)
+    {
+        // Ensure image_url is always set
+        if (!isset($product->image_url)) {
+            $product->image_url = $product->getFirstImageUrl();
+        }
+        
+        // Ensure effective_price is always set
+        if (!isset($product->effective_price)) {
+            $product->effective_price = $product->getEffectivePrice();
+        }
+        
+        // Ensure category relationship is loaded
+        if (!$product->relationLoaded('category')) {
+            $product->load('category');
+        }
+        
+        // Ensure defaultSku relationship is loaded
+        if (!$product->relationLoaded('defaultSku')) {
+            $product->load(['defaultSku' => function($query) {
+                $query->orderBy('id');
+            }]);
+        }
+        
+        return $product;
     }
 }

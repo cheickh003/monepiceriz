@@ -22,7 +22,7 @@ export default function TrustBadges({ className }: TrustBadgesProps) {
         {
             icon: <Truck className="w-8 h-8 text-green-600" />,
             title: "Livraison Rapide",
-            description: "Livraison gratuite dès 50€"
+            description: "Livraison gratuite dès 25 000 CFA"
         },
         {
             icon: <Clock className="w-8 h-8 text-green-600" />,

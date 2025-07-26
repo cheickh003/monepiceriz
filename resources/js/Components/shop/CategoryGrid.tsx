@@ -35,13 +35,13 @@ const iconMap: Record<string, keyof typeof LucideIcons> = {
   'fish': 'Fish',
   'package-2': 'Package2',
   'wheat': 'Wheat',
-  'grain': 'Grain',
+  'grain': 'Wheat',
   'noodles': 'Soup',
   'rice': 'Package',
   'flask-conical': 'FlaskConical',
   
   // Épices et Sauces
-  'pepper': 'Pepper',
+  'pepper': 'FlaskConical',
   'sauce': 'Soup',
   'tomato': 'Cherry',
   'egg': 'Egg',
@@ -70,7 +70,7 @@ const iconMap: Record<string, keyof typeof LucideIcons> = {
   // Hygiène
   'soap': 'Droplets',
   'toothbrush': 'Brush',
-  'shower': 'Shower',
+  'shower': 'Droplets',
   'spray-can': 'SprayCan',
   'sparkles': 'Sparkles',
   'package': 'Package',

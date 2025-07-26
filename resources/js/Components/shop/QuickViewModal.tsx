@@ -1,33 +1,12 @@
 import React, { useState } from 'react';
 import { X, Plus, Minus, ShoppingCart, Eye, Package, Star } from 'lucide-react';
 import { Button } from '@/Components/ui/button';
-import { Modal } from '@/Components/ui/modal';
+import SimpleModal from '@/Components/ui/modal';
 import { useCart } from '@/contexts/CartContext';
 import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
-
-interface Product {
-    id: number;
-    name: string;
-    slug: string;
-    description: string;
-    price: number;
-    compare_at_price?: number;
-    image: string;
-    images?: string[];
-    stock: number;
-    category?: {
-        name: string;
-        slug: string;
-    };
-    rating?: number;
-    reviews_count?: number;
-    variants?: Array<{
-        id: number;
-        name: string;
-        options: string[];
-    }>;
-}
+import { Product } from '@/types';
+import { formatPrice } from '@/lib/utils';
 
 interface QuickViewModalProps {
     product: Product | null;
@@ -38,33 +17,30 @@ interface QuickViewModalProps {
 export default function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
     const [quantity, setQuantity] = useState(1);
     const [selectedImage, setSelectedImage] = useState(0);
-    const [selectedVariants, setSelectedVariants] = useState<Record<number, string>>({});
     const { addToCart } = useCart();
 
     if (!product) return null;
 
-    const images = product.images || [product.image];
-    const hasDiscount = product.compare_at_price && product.compare_at_price > product.price;
-    const discountPercentage = hasDiscount 
-        ? Math.round(((product.compare_at_price - product.price) / product.compare_at_price) * 100)
+    const images = product.gallery_images?.filter(Boolean) || (product.image_url ? [product.image_url] : []);
+    const hasDiscount = product.is_promoted && product.promo_price;
+    const discountPercentage = hasDiscount && product.price_ttc
+        ? Math.round(((product.price_ttc - (product.promo_price || 0)) / product.price_ttc) * 100)
         : 0;
+    const currentPrice = product.effective_price || product.price_ttc || 0;
+    const hasStock = product.default_sku && product.default_sku.stock_quantity > 0;
 
     const handleQuantityChange = (delta: number) => {
         const newQuantity = quantity + delta;
-        if (newQuantity >= 1 && newQuantity <= product.stock) {
+        const maxStock = product.default_sku?.stock_quantity || 99;
+        if (newQuantity >= 1 && newQuantity <= maxStock) {
             setQuantity(newQuantity);
         }
     };
 
     const handleAddToCart = () => {
-        addToCart({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            image: product.image,
-            quantity,
-            variants: selectedVariants
-        });
+        if (!hasStock) return;
+        
+        addToCart(product, quantity);
         onClose();
         setQuantity(1);
     };
@@ -86,7 +62,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="max-w-4xl">
+        <SimpleModal isOpen={isOpen} onClose={onClose} className="max-w-4xl">
             <div className="relative p-0">
                 {/* Close Button */}
                 <button
@@ -102,7 +78,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                     <div className="relative">
                         <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                             <img
-                                src={images[selectedImage]}
+                                src={images[selectedImage] || '/img/placeholder.png'}
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                             />
@@ -127,7 +103,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                                         )}
                                     >
                                         <img
-                                            src={image}
+                                            src={image || '/img/placeholder.png'}
                                             alt={`${product.name} ${index + 1}`}
                                             className="w-full h-full object-cover"
                                         />
@@ -155,9 +131,9 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                         </h2>
 
                         {/* Rating */}
-                        {product.rating && (
+                        {product.average_rating && (
                             <div className="flex items-center gap-2 mb-4">
-                                {renderStars(product.rating)}
+                                {renderStars(product.average_rating)}
                                 <span className="text-sm text-gray-600">
                                     ({product.reviews_count || 0} avis)
                                 </span>
@@ -168,17 +144,17 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                         <div className="mb-4">
                             <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-bold text-green-600">
-                                    {product.price.toFixed(2)}€
+                                    {formatPrice(currentPrice)}
                                 </span>
                                 {hasDiscount && (
                                     <span className="text-lg text-gray-500 line-through">
-                                        {product.compare_at_price?.toFixed(2)}€
+                                        {formatPrice(product.price_ttc || 0)}
                                     </span>
                                 )}
                             </div>
                             {hasDiscount && (
                                 <p className="text-sm text-green-600 mt-1">
-                                    Économisez {((product.compare_at_price || 0) - product.price).toFixed(2)}€
+                                    Économisez {formatPrice((product.price_ttc || 0) - currentPrice)}
                                 </p>
                             )}
                         </div>
@@ -188,48 +164,17 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                             {product.description}
                         </p>
 
-                        {/* Variants */}
-                        {product.variants && product.variants.length > 0 && (
-                            <div className="space-y-4 mb-6">
-                                {product.variants.map((variant) => (
-                                    <div key={variant.id}>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            {variant.name}
-                                        </label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {variant.options.map((option) => (
-                                                <button
-                                                    key={option}
-                                                    onClick={() => setSelectedVariants({
-                                                        ...selectedVariants,
-                                                        [variant.id]: option
-                                                    })}
-                                                    className={cn(
-                                                        "px-4 py-2 border rounded-lg text-sm transition-colors",
-                                                        selectedVariants[variant.id] === option
-                                                            ? "border-green-600 bg-green-50 text-green-700"
-                                                            : "border-gray-300 hover:border-gray-400"
-                                                    )}
-                                                >
-                                                    {option}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
 
                         {/* Stock Status */}
                         <div className="flex items-center gap-2 mb-6">
                             <Package className="w-5 h-5 text-gray-500" />
                             <span className={cn(
                                 "text-sm font-medium",
-                                product.stock > 10 ? "text-green-600" : 
-                                product.stock > 0 ? "text-orange-600" : "text-red-600"
+                                (product.default_sku?.stock_quantity || 0) > 10 ? "text-green-600" : 
+                                (product.default_sku?.stock_quantity || 0) > 0 ? "text-orange-600" : "text-red-600"
                             )}>
-                                {product.stock > 10 ? "En stock" :
-                                 product.stock > 0 ? `Plus que ${product.stock} en stock` :
+                                {(product.default_sku?.stock_quantity || 0) > 10 ? "En stock" :
+                                 (product.default_sku?.stock_quantity || 0) > 0 ? `Plus que ${product.default_sku?.stock_quantity} en stock` :
                                  "Rupture de stock"}
                             </span>
                         </div>
@@ -251,7 +196,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                                 </span>
                                 <button
                                     onClick={() => handleQuantityChange(1)}
-                                    disabled={quantity >= product.stock}
+                                    disabled={quantity >= (product.default_sku?.stock_quantity || 0)}
                                     className="p-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                                     aria-label="Augmenter la quantité"
                                 >
@@ -264,7 +209,7 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                         <div className="flex gap-3">
                             <Button
                                 onClick={handleAddToCart}
-                                disabled={product.stock === 0}
+                                disabled={!hasStock}
                                 className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
                                 size="lg"
                             >
@@ -286,6 +231,6 @@ export default function QuickViewModal({ product, isOpen, onClose }: QuickViewMo
                     </div>
                 </div>
             </div>
-        </Modal>
+        </SimpleModal>
     );
 }

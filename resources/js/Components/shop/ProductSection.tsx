@@ -1,6 +1,6 @@
 import { Link } from '@inertiajs/react'
 import { Plus, Star, Eye, Heart, ShoppingCart, Package } from 'lucide-react'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 import { Card } from '@/Components/ui/card'
 import { Badge } from '@/Components/ui/badge'
 import { Skeleton } from '@/Components/ui/skeleton'
@@ -19,9 +19,52 @@ interface ProductSectionProps {
   onQuickView?: (product: Product) => void
 }
 
+// Validate product data to ensure no Symbol values
+function validateProductData(product: any): boolean {
+  if (!product || typeof product !== 'object') return false
+  
+  // Check for Symbol values in product properties
+  for (const key in product) {
+    const value = product[key]
+    if (typeof value === 'symbol') {
+      console.warn(`Product contains Symbol value for property "${key}"`, value)
+      return false
+    }
+  }
+  
+  // Ensure required properties exist and are valid
+  if (!product.id || typeof product.id === 'symbol') return false
+  if (!product.name || typeof product.name === 'symbol') return false
+  
+  return true
+}
+
+// Sanitize product data by converting Symbol values
+function sanitizeProduct(product: any): Product {
+  const sanitized: any = {}
+  
+  for (const key in product) {
+    const value = product[key]
+    if (typeof value === 'symbol') {
+      sanitized[key] = value.toString()
+    } else {
+      sanitized[key] = value
+    }
+  }
+  
+  return sanitized as Product
+}
+
 export function ProductSection({ title, products, viewAllLink, loading = false, onQuickView }: ProductSectionProps) {
   const { addToCart } = useCart()
   const [favoriteProducts, setFavoriteProducts] = useState<number[]>([])
+  
+  // Validate and sanitize products
+  const validProducts = products.filter(validateProductData).map(sanitizeProduct)
+  
+  if (validProducts.length !== products.length && process.env.NODE_ENV === 'development') {
+    console.warn(`ProductSection: Filtered out ${products.length - validProducts.length} products with invalid data`)
+  }
 
   // Load favorites from localStorage on mount
   useEffect(() => {
@@ -114,8 +157,8 @@ export function ProductSection({ title, products, viewAllLink, loading = false, 
                   </div>
                 ))
               ) : (
-                products.map((product) => (
-                  <div key={product.id} className="flex-shrink-0 w-44">
+                validProducts.map((product) => (
+                  <div key={String(product.id)} className="flex-shrink-0 w-44">
                     <ProductCard 
                       product={product} 
                       onAddToCart={() => handleAddToCart(product)}
@@ -138,9 +181,9 @@ export function ProductSection({ title, products, viewAllLink, loading = false, 
               <ProductCardSkeleton key={i} />
             ))
           ) : (
-            products.map((product) => (
+            validProducts.map((product) => (
               <ProductCard 
-                key={product.id}
+                key={String(product.id)}
                 product={product} 
                 onAddToCart={() => handleAddToCart(product)}
                 onQuickView={onQuickView}
@@ -174,7 +217,7 @@ const ProductCard = memo(({
   const currentPrice = product.effective_price || product.price_ttc || product.default_sku?.price_ttc || 0
   const stockQuantity = product.default_sku?.stock_quantity || 0
   const isLowStock = stockQuantity > 0 && stockQuantity <= 5
-  const discount = product.is_promoted && product.promo_price 
+  const discount = product.is_promoted && product.promo_price && product.price_ttc
     ? Math.round(((product.price_ttc - product.promo_price) / product.price_ttc) * 100)
     : 0
 
@@ -227,7 +270,7 @@ const ProductCard = memo(({
             isHovered ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
           )}>
             {onToggleFavorite && (
-              <Button
+              <SafeButton
                 size="icon"
                 variant="secondary"
                 className="w-8 h-8 bg-white hover:bg-gray-100 shadow-md"
@@ -240,10 +283,10 @@ const ProductCard = memo(({
                   "w-4 h-4",
                   isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
                 )} />
-              </Button>
+              </SafeButton>
             )}
             {onQuickView && (
-              <Button
+              <SafeButton
                 size="icon"
                 variant="secondary"
                 className="w-8 h-8 bg-white hover:bg-gray-100 shadow-md"
@@ -253,7 +296,7 @@ const ProductCard = memo(({
                 }}
               >
                 <Eye className="w-4 h-4 text-gray-600" />
-              </Button>
+              </SafeButton>
             )}
           </div>
         </div>
@@ -284,7 +327,9 @@ const ProductCard = memo(({
           </div>
 
           {/* Catégorie */}
-          <p className="text-xs text-gray-500 mb-1">{product.category.name}</p>
+          {product.category && (
+            <p className="text-xs text-gray-500 mb-1">{product.category.name}</p>
+          )}
           
           {/* Nom */}
           <h4 className="font-semibold text-sm line-clamp-2 mb-2 text-gray-900 group-hover:text-green-600 transition-colors">
@@ -293,7 +338,7 @@ const ProductCard = memo(({
 
           {/* Prix */}
           <div className="mt-auto">
-            {product.is_promoted && product.promo_price ? (
+            {product.is_promoted && product.promo_price && product.price_ttc ? (
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-lg font-bold text-green-600">
@@ -321,7 +366,7 @@ const ProductCard = memo(({
 
       {/* Bouton ajouter */}
       <div className="p-4 pt-0">
-        <Button
+        <SafeButton
           onClick={onAddToCart}
           disabled={!hasStock}
           size="sm"
@@ -340,7 +385,7 @@ const ProductCard = memo(({
           ) : (
             "Rupture de stock"
           )}
-        </Button>
+        </SafeButton>
       </div>
     </Card>
   )

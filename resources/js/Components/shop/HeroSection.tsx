@@ -1,7 +1,8 @@
 import { Link } from '@inertiajs/react'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 import { Truck, ShieldCheck, Clock, ChevronRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { sanitizeForReact } from '@/lib/utils'
 
 interface HeroSectionProps {
   promotions: {
@@ -14,13 +15,16 @@ interface HeroSectionProps {
 
 export function HeroSection({ promotions }: HeroSectionProps) {
   const [isVisible, setIsVisible] = useState(false)
+  
+  // Sanitize promotions data to ensure no Symbol values
+  const safePromotions = sanitizeForReact(promotions)
 
   useEffect(() => {
     setIsVisible(true)
   }, [])
 
   const trustIndicators = [
-    { icon: Truck, text: "Livraison gratuite dès 50€" },
+    { icon: Truck, text: "Livraison gratuite dès 25 000 CFA" },
     { icon: ShieldCheck, text: "Produits frais garantis" },
     { icon: Clock, text: "Livraison en 24h" }
   ]
@@ -34,10 +38,10 @@ export function HeroSection({ promotions }: HeroSectionProps) {
             {/* Texte */}
             <div className={`flex-1 p-8 md:p-12 z-10 transition-all duration-700 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'}`}>
               <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-                {promotions.title}
+                {safePromotions.title}
               </h1>
               <p className="text-lg md:text-xl text-gray-700 mb-6">
-                {promotions.subtitle}
+                {safePromotions.subtitle}
               </p>
               
               {/* Trust Indicators */}
@@ -56,15 +60,15 @@ export function HeroSection({ promotions }: HeroSectionProps) {
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link href="/products?promo=true">
-                  <Button size="lg" className="bg-green-600 hover:bg-green-700 w-full sm:w-auto gap-2">
+                  <SafeButton size="lg" className="bg-green-600 hover:bg-green-700 w-full sm:w-auto gap-2">
                     Acheter maintenant
                     <ChevronRight className="w-4 h-4" />
-                  </Button>
+                  </SafeButton>
                 </Link>
                 <Link href="/categories">
-                  <Button size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
+                  <SafeButton size="lg" variant="outline" className="border-green-600 text-green-600 hover:bg-green-50 w-full sm:w-auto">
                     Découvrir nos catégories
-                  </Button>
+                  </SafeButton>
                 </Link>
               </div>
             </div>

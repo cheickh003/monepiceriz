@@ -1,5 +1,5 @@
 import { MapPin, ShoppingCart, ChevronDown, Menu, Search, User, Sun, Moon, Package2 } from 'lucide-react'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 import { Badge } from '@/Components/ui/badge'
 import { useCart } from '@/contexts/CartContext'
 import { useState } from 'react'
@@ -26,7 +26,7 @@ interface MobileHeaderProps {
 
 export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
   const { itemCount, isOpen, setIsOpen } = useCart()
-  const [address, setAddress] = useState('61 Hopper street, Abidjan')
+  const [address, setAddress] = useState('Allocodrome non loin de l\'école, Av. Jean Mermoz, Abidjan')
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -50,14 +50,14 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
         <div className="md:hidden">
           <div className="flex items-center justify-between px-4 py-3">
             {/* Menu hamburger */}
-            <Button
+            <SafeButton
               variant="ghost"
               size="icon"
               onClick={() => setIsMenuOpen(true)}
               aria-label="Menu principal"
             >
               <Menu className="h-6 w-6" />
-            </Button>
+            </SafeButton>
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <Package2 className="h-6 w-6 text-green-600" />
@@ -66,15 +66,15 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
 
             {/* Actions */}
             <div className="flex items-center gap-2">
-              <Button
+              <SafeButton
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 aria-label="Rechercher"
               >
                 <Search className="h-5 w-5" />
-              </Button>
-              <Button
+              </SafeButton>
+              <SafeButton
                 variant="ghost"
                 size="icon"
                 className="relative"
@@ -90,7 +90,7 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
                     {itemCount}
                   </Badge>
                 )}
-              </Button>
+              </SafeButton>
             </div>
           </div>
 
@@ -135,32 +135,32 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
             {/* Actions desktop */}
             <div className="flex items-center gap-4">
               {/* Dark mode toggle */}
-              <Button
+              <SafeButton
                 variant="ghost"
                 size="icon"
                 onClick={toggleDarkMode}
                 aria-label="Changer le thème"
               >
                 {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </Button>
+              </SafeButton>
 
               {/* User account */}
               {user ? (
-                <Button variant="ghost" className="gap-2">
+                <SafeButton variant="ghost" className="gap-2">
                   <User className="h-5 w-5" />
                   <span className="hidden lg:inline">{user.name}</span>
-                </Button>
+                </SafeButton>
               ) : (
                 <Link href="/login">
-                  <Button variant="ghost" className="gap-2">
+                  <SafeButton variant="ghost" className="gap-2">
                     <User className="h-5 w-5" />
                     <span className="hidden lg:inline">Connexion</span>
-                  </Button>
+                  </SafeButton>
                 </Link>
               )}
 
               {/* Cart */}
-              <Button
+              <SafeButton
                 variant="default"
                 className="relative bg-green-600 hover:bg-green-700"
                 onClick={() => setIsOpen(true)}
@@ -175,7 +175,7 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
                     {itemCount}
                   </Badge>
                 )}
-              </Button>
+              </SafeButton>
             </div>
           </div>
 
