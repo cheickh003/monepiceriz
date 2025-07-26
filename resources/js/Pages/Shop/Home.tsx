@@ -8,6 +8,8 @@ import TestimonialsSection from '@/Components/shop/TestimonialsSection'
 import NewsletterSection from '@/Components/shop/NewsletterSection'
 import QuickViewModal from '@/Components/shop/QuickViewModal'
 import { useState } from 'react'
+import { useShopSync } from '@/hooks/useShopSync'
+import { RefreshCw } from 'lucide-react'
 
 interface HomeProps {
   categories: any[]
@@ -26,6 +28,7 @@ interface HomeProps {
 export default function Home({ categories, promotions, featured }: HomeProps) {
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
+  const { needsUpdate, isRefreshing, refreshData } = useShopSync()
 
   const handleQuickView = (product: any) => {
     setSelectedProduct(product)
@@ -40,6 +43,24 @@ export default function Home({ categories, promotions, featured }: HomeProps) {
         keywords="épicerie africaine, produits africains, riz, épices, livraison Abidjan, alimentation africaine, MonEpice&Riz"
         type="website"
       />
+      
+      {/* Notification de mise à jour */}
+      {needsUpdate && (
+        <div className="fixed top-4 right-4 z-50 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium">
+            {isRefreshing ? 'Mise à jour...' : 'Nouvelles données disponibles'}
+          </span>
+          {!isRefreshing && (
+            <button
+              onClick={refreshData}
+              className="ml-2 bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-xs transition-colors"
+            >
+              Actualiser
+            </button>
+          )}
+        </div>
+      )}
       
       {/* Bannière héro */}
       <HeroSection promotions={promotions} />

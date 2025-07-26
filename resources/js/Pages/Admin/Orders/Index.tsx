@@ -36,16 +36,23 @@ export default function OrdersIndex({
 }: OrdersIndexProps) {
     const [isExporting, setIsExporting] = useState(false)
     const { data, setData, get, processing } = useForm({
-        status: filters.status || '',
-        payment_status: filters.payment_status || '',
-        delivery_method: filters.delivery_method || '',
+        status: filters.status || 'all',
+        payment_status: filters.payment_status || 'all',
+        delivery_method: filters.delivery_method || 'all',
         date_from: filters.date_from || '',
         date_to: filters.date_to || '',
         search: filters.search || '',
     })
 
     const handleFilter = () => {
-        get('/admin/orders', {
+        const filterData = {
+            ...data,
+            status: data.status === 'all' ? '' : data.status,
+            payment_status: data.payment_status === 'all' ? '' : data.payment_status,
+            delivery_method: data.delivery_method === 'all' ? '' : data.delivery_method,
+        }
+        
+        router.get('/admin/orders', filterData, {
             preserveState: true,
             preserveScroll: true,
         })
@@ -54,7 +61,13 @@ export default function OrdersIndex({
     const handleExport = async (format: string) => {
         setIsExporting(true)
         try {
-            const response = await window.fetch(`/admin/orders/export?format=${format}&${new URLSearchParams(data as any)}`)
+            const exportData = {
+                ...data,
+                status: data.status === 'all' ? '' : data.status,
+                payment_status: data.payment_status === 'all' ? '' : data.payment_status,
+                delivery_method: data.delivery_method === 'all' ? '' : data.delivery_method,
+            }
+            const response = await window.fetch(`/admin/orders/export?format=${format}&${new URLSearchParams(exportData as any)}`)
             const blob = await response.blob()
             const url = window.URL.createObjectURL(blob)
             const a = document.createElement('a')
@@ -205,7 +218,7 @@ export default function OrdersIndex({
                                         <SelectValue placeholder="Tous" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Tous</SelectItem>
+                                        <SelectItem value="all">Tous</SelectItem>
                                         {Object.entries(statuses).map(([value, label]) => (
                                             <SelectItem key={value} value={value}>{label}</SelectItem>
                                         ))}
@@ -220,7 +233,7 @@ export default function OrdersIndex({
                                         <SelectValue placeholder="Tous" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Tous</SelectItem>
+                                        <SelectItem value="all">Tous</SelectItem>
                                         {Object.entries(paymentStatuses).map(([value, label]) => (
                                             <SelectItem key={value} value={value}>{label}</SelectItem>
                                         ))}
@@ -235,7 +248,7 @@ export default function OrdersIndex({
                                         <SelectValue placeholder="Tous" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Tous</SelectItem>
+                                        <SelectItem value="all">Tous</SelectItem>
                                         <SelectItem value="pickup">Retrait</SelectItem>
                                         <SelectItem value="delivery">Livraison</SelectItem>
                                     </SelectContent>

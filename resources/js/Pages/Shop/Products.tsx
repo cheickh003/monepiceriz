@@ -7,9 +7,10 @@ import AdvancedFilters from '@/Components/shop/AdvancedFilters'
 import BreadcrumbNavigation, { generateBreadcrumbs } from '@/Components/shop/BreadcrumbNavigation'
 import QuickViewModal from '@/Components/shop/QuickViewModal'
 import { Button } from '@/Components/ui/button'
-import { LayoutGrid, List, ChevronLeft, ChevronRight, Package } from 'lucide-react'
+import { LayoutGrid, List, ChevronLeft, ChevronRight, Package, RefreshCw } from 'lucide-react'
 import { Product, Category, PaginatedResponse } from '@/types'
 import { formatPrice } from '@/lib/utils'
+import { useShopSync } from '@/hooks/useShopSync'
 
 interface Filters {
   category?: number
@@ -34,6 +35,7 @@ export default function Products({ products, categories, filters }: ProductsPage
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(filters.view || 'grid')
+  const { needsUpdate, isRefreshing, refreshData } = useShopSync()
 
   const handleFiltersChange = (newFilters: any) => {
     router.get('/products', { ...filters, ...newFilters }, { 
@@ -79,6 +81,24 @@ export default function Products({ products, categories, filters }: ProductsPage
         description="Découvrez notre sélection complète de produits africains : épices, riz, alimentation et plus. Filtrez par catégorie, prix et disponibilité."
         keywords="produits africains, épices, riz, alimentation africaine, boutique en ligne, MonEpice&Riz"
       />
+      
+      {/* Notification de mise à jour */}
+      {needsUpdate && (
+        <div className="fixed top-4 right-4 z-50 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in">
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium">
+            {isRefreshing ? 'Mise à jour...' : 'Nouvelles données disponibles'}
+          </span>
+          {!isRefreshing && (
+            <button
+              onClick={refreshData}
+              className="ml-2 bg-orange-600 hover:bg-orange-700 px-2 py-1 rounded text-xs transition-colors"
+            >
+              Actualiser
+            </button>
+          )}
+        </div>
+      )}
       
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Breadcrumb */}

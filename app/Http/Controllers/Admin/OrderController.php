@@ -21,7 +21,6 @@ class OrderController extends Controller
     {
         $this->orderService = $orderService;
         $this->cinetPayService = $cinetPayService;
-        $this->middleware('admin');
     }
 
     /**

@@ -33,6 +33,23 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Debug: Log user info
+        $user = auth()->user();
+        \Log::info('User login debug:', [
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'role' => $user->role,
+            'is_admin' => in_array($user->role, ['admin', 'manager'])
+        ]);
+
+        // Rediriger vers la page admin si l'utilisateur est admin ou manager
+        if (auth()->user() && in_array(auth()->user()->role, ['admin', 'manager'])) {
+            \Log::info('Redirecting to admin dashboard');
+            // Forcer la redirection vers admin sans utiliser intended()
+            return redirect()->to(route('admin.dashboard', absolute: false));
+        }
+
+        \Log::info('Redirecting to user dashboard');
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

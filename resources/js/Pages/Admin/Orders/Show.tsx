@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Head, useForm, router } from '@inertiajs/react'
 import AdminLayout from '@/Layouts/AdminLayout'
+import { useInertiaErrorHandler } from '@/hooks/useErrorHandler'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { Label } from '@/Components/ui/label'
@@ -37,6 +38,8 @@ export default function OrderShow({
     availableStatuses 
 }: OrderShowProps) {
     const [isPrinting, setIsPrinting] = useState(false)
+    const [isCapturingPayment, setIsCapturingPayment] = useState(false)
+    const { createFormErrorHandler } = useInertiaErrorHandler()
     
     // Form for status update
     const statusForm = useForm({
@@ -65,13 +68,9 @@ export default function OrderShow({
                 })
                 statusForm.reset()
             },
-            onError: () => {
-                toast({
-                    title: "Erreur",
-                    description: "Impossible de mettre à jour le statut",
-                    variant: "destructive"
-                })
-            }
+            onError: createFormErrorHandler('update', {
+                toastDescription: "Impossible de mettre à jour le statut"
+            })
         })
     }
 
@@ -85,19 +84,17 @@ export default function OrderShow({
                     variant: "success"
                 })
             },
-            onError: () => {
-                toast({
-                    title: "Erreur",
-                    description: "Impossible de mettre à jour les poids",
-                    variant: "destructive"
-                })
-            }
+            onError: createFormErrorHandler('update', {
+                toastDescription: "Impossible de mettre à jour les poids"
+            })
         })
     }
 
     const handleCapturePayment = () => {
+        setIsCapturingPayment(true)
         router.post(`/admin/orders/${order.id}/capture`, {}, {
             onSuccess: () => {
+                setIsCapturingPayment(false)
                 toast({
                     title: "Succès",
                     description: "Le paiement a été capturé",
@@ -105,6 +102,7 @@ export default function OrderShow({
                 })
             },
             onError: () => {
+                setIsCapturingPayment(false)
                 toast({
                     title: "Erreur",
                     description: "Impossible de capturer le paiement",
@@ -507,9 +505,14 @@ export default function OrderShow({
                                     <Button
                                         className="w-full"
                                         onClick={handleCapturePayment}
+                                        disabled={isCapturingPayment}
                                     >
-                                        <CreditCard className="mr-2 h-4 w-4" />
-                                        Capturer {formatPrice(order.total_amount)}
+                                        {isCapturingPayment ? (
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <CreditCard className="mr-2 h-4 w-4" />
+                                        )}
+                                        {isCapturingPayment ? "Capture en cours..." : `Capturer ${formatPrice(order.total_amount)}`}
                                     </Button>
                                 </CardContent>
                             </Card>

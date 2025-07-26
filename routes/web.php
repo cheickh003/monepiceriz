@@ -62,9 +62,8 @@ Route::middleware('auth')->group(function () {
 
 // Admin routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        return Inertia::render('Admin/Dashboard');
-    })->name('dashboard');
+    Route::get('/', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])
+        ->name('dashboard');
     
     // Categories management
     Route::resource('categories', \App\Http\Controllers\Admin\CategoryController::class);
@@ -82,6 +81,8 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('product-attributes', \App\Http\Controllers\Admin\ProductAttributeController::class);
     Route::post('product-attributes/{productAttribute}/values', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'addValue'])
         ->name('product-attributes.add-value');
+    Route::delete('product-attributes/{productAttribute}/values/{value}', [\App\Http\Controllers\Admin\ProductAttributeController::class, 'deleteValue'])
+        ->name('product-attributes.delete-value');
     
     // Orders management
     Route::resource('orders', OrderController::class)->only(['index', 'show']);
@@ -92,6 +93,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::post('orders/{order}/cancel', [OrderController::class, 'cancel'])->name('orders.cancel');
     Route::get('orders/{order}/print', [OrderController::class, 'print'])->name('orders.print');
     Route::get('orders/export', [OrderController::class, 'export'])->name('orders.export');
+    
+    // Demo page for loading states
+    Route::get('loading-states-demo', function () {
+        return inertia('Admin/LoadingStatesDemo');
+    })->name('admin.loading-states-demo');
 });
 
 require __DIR__.'/auth.php';

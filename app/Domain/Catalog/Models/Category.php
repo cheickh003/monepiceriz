@@ -19,10 +19,16 @@ class Category extends Model
     protected $fillable = [
         'name', 
         'slug', 
+        'description',
         'parent_id', 
         'position', 
-        'is_active', 
-        'icon'
+        'is_active',
+        'is_featured',
+        'icon',
+        'image',
+        'banner_image',
+        'meta_title',
+        'meta_description'
     ];
     
     /**
@@ -32,6 +38,7 @@ class Category extends Model
      */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_featured' => 'boolean',
         'position' => 'integer',
         'parent_id' => 'integer',
     ];

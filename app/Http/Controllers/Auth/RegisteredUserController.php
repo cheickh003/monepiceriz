@@ -36,15 +36,18 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $user = User::create([
+        event(new Registered($user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-        ]);
-
-        event(new Registered($user));
+        ])));
 
         Auth::login($user);
+
+        // Rediriger vers la page admin si l'utilisateur est admin ou manager
+        if (auth()->user() && in_array(auth()->user()->role, ['admin', 'manager'])) {
+            return redirect(route('admin.dashboard', absolute: false));
+        }
 
         return redirect(route('dashboard', absolute: false));
     }

@@ -50,8 +50,8 @@ export default function AdvancedFilters({
     const [isOpen, setIsOpen] = useState(false);
     const [priceRange, setPriceRange] = useState<PriceRange>({ min: 0, max: 100 });
     const [selectedCategory, setSelectedCategory] = useState<string>('');
-    const [selectedBrand, setSelectedBrand] = useState<string>('');
-    const [selectedOrigin, setSelectedOrigin] = useState<string>('');
+    const [selectedBrand, setSelectedBrand] = useState<string>('all');
+    const [selectedOrigin, setSelectedOrigin] = useState<string>('all');
     const [selectedRating, setSelectedRating] = useState<number>(0);
     const [inStockOnly, setInStockOnly] = useState(false);
     const [onSaleOnly, setOnSaleOnly] = useState(false);
@@ -60,8 +60,8 @@ export default function AdvancedFilters({
     // Calculate active filters count
     const activeFiltersCount = [
         selectedCategory,
-        selectedBrand,
-        selectedOrigin,
+        selectedBrand !== 'all' && selectedBrand,
+        selectedOrigin !== 'all' && selectedOrigin,
         selectedRating > 0,
         inStockOnly,
         onSaleOnly,
@@ -72,8 +72,8 @@ export default function AdvancedFilters({
     useEffect(() => {
         const filters = {
             category: selectedCategory,
-            brand: selectedBrand,
-            origin: selectedOrigin,
+            brand: selectedBrand === 'all' ? '' : selectedBrand,
+            origin: selectedOrigin === 'all' ? '' : selectedOrigin,
             rating: selectedRating,
             price_min: priceRange.min,
             price_max: priceRange.max,
@@ -260,7 +260,7 @@ export default function AdvancedFilters({
                             <SelectValue placeholder="Toutes les marques" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">Toutes les marques</SelectItem>
+                            <SelectItem value="all">Toutes les marques</SelectItem>
                             {brands.map((brand) => (
                                 <SelectItem key={brand.value} value={brand.value}>
                                     {brand.label}
@@ -281,7 +281,7 @@ export default function AdvancedFilters({
                             <SelectValue placeholder="Toutes les origines" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">Toutes les origines</SelectItem>
+                            <SelectItem value="all">Toutes les origines</SelectItem>
                             {origins.map((origin) => (
                                 <SelectItem key={origin.value} value={origin.value}>
                                     {origin.label}

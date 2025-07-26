@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Domain\Catalog\Models\Category;
 use App\Domain\Catalog\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
 class ShopController extends Controller
@@ -15,64 +16,66 @@ class ShopController extends Controller
      */
     public function index()
     {
-        // Catégories principales actives
-        $categories = Category::with('children')
-            ->whereNull('parent_id')
-            ->where('is_active', true)
-            ->orderBy('position')
-            ->take(8)
-            ->get();
+        return $this->cacheWithTags(['shop', 'categories', 'products'], 'shop.home.data', 10, function () {
+            // Catégories principales actives
+            $categories = Category::with('children')
+                ->whereNull('parent_id')
+                ->where('is_active', true)
+                ->orderBy('position')
+                ->take(8)
+                ->get();
 
-        // Produits en vedette (featured)
-        $promotedProducts = Product::with(['category', 'defaultSku' => function($query) {
-                $query->orderBy('id');
-            }])
-            ->where('is_active', true)
-            ->where('is_featured', true)
-            ->orderBy('id', 'desc')
-            ->take(8)
-            ->get()
-            ->map(function ($product) {
-                return $this->ensureProductData($product);
-            });
+            // Produits en vedette (featured)
+            $promotedProducts = Product::with(['category', 'defaultSku' => function($query) {
+                    $query->orderBy('id');
+                }])
+                ->where('is_active', true)
+                ->where('is_featured', true)
+                ->orderBy('id', 'desc')
+                ->take(8)
+                ->get()
+                ->map(function ($product) {
+                    return $this->ensureProductData($product);
+                });
 
-        // Nouveaux produits
-        $newProducts = Product::with(['category', 'defaultSku' => function($query) {
-                $query->orderBy('id');
-            }])
-            ->where('is_active', true)
-            ->orderBy('created_at', 'desc')
-            ->take(8)
-            ->get()
-            ->map(function ($product) {
-                return $this->ensureProductData($product);
-            });
+            // Nouveaux produits
+            $newProducts = Product::with(['category', 'defaultSku' => function($query) {
+                    $query->orderBy('id');
+                }])
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->take(8)
+                ->get()
+                ->map(function ($product) {
+                    return $this->ensureProductData($product);
+                });
 
-        // Produits populaires (random pour l'instant)
-        $popularProducts = Product::with(['category', 'defaultSku' => function($query) {
-                $query->orderBy('id');
-            }])
-            ->where('is_active', true)
-            ->inRandomOrder()
-            ->take(8)
-            ->get()
-            ->map(function ($product) {
-                return $this->ensureProductData($product);
-            });
+            // Produits populaires (random pour l'instant)
+            $popularProducts = Product::with(['category', 'defaultSku' => function($query) {
+                    $query->orderBy('id');
+                }])
+                ->where('is_active', true)
+                ->inRandomOrder()
+                ->take(8)
+                ->get()
+                ->map(function ($product) {
+                    return $this->ensureProductData($product);
+                });
 
-        return Inertia::render('Shop/Home', [
-            'categories' => $categories,
-            'promotions' => [
-                'title' => 'Jusqu\'à 30% de réduction',
-                'subtitle' => 'Profitez de nos offres exceptionnelles',
-                'image' => '/images/hero-banner.jpg',
-            ],
-            'featured' => [
-                'promoted' => $promotedProducts,
-                'new' => $newProducts,
-                'popular' => $popularProducts,
-            ],
-        ]);
+            return Inertia::render('Shop/Home', [
+                'categories' => $categories,
+                'promotions' => [
+                    'title' => 'Jusqu\'à 30% de réduction',
+                    'subtitle' => 'Profitez de nos offres exceptionnelles',
+                    'image' => '/images/hero-banner.jpg',
+                ],
+                'featured' => [
+                    'promoted' => $promotedProducts,
+                    'new' => $newProducts,
+                    'popular' => $popularProducts,
+                ],
+            ]);
+        });
     }
 
     /**
@@ -240,69 +243,75 @@ class ShopController extends Controller
             abort(404);
         }
 
-        $query = Product::with(['category', 'defaultSku' => function($query) {
-                $query->orderBy('id');
-            }])
-            ->where('is_active', true)
-            ->where('category_id', $category->id);
+        // Créer une clé de cache basée sur les filtres
+        $filters = $request->only(['min_price', 'max_price', 'promo', 'in_stock', 'sort']);
+        $cacheKey = "shop.category.{$category->id}." . md5(serialize($filters));
 
-        // Appliquer les mêmes filtres que la page produits
-        if ($request->has('min_price')) {
-            $query->where('price_ttc', '>=', $request->min_price);
-        }
-        if ($request->has('max_price')) {
-            $query->where('price_ttc', '<=', $request->max_price);
-        }
-        if ($request->boolean('promo')) {
-            $query->where('is_promoted', true)
-                ->whereNotNull('promo_price');
-        }
-        if ($request->boolean('in_stock')) {
-            $query->whereHas('skus', function ($q) {
-                $q->where('stock_quantity', '>', 0);
+        return $this->cacheWithTags(['shop', 'products', 'categories'], $cacheKey, 15, function () use ($category, $request) {
+            $query = Product::with(['category', 'defaultSku' => function($query) {
+                    $query->orderBy('id');
+                }])
+                ->where('is_active', true)
+                ->where('category_id', $category->id);
+
+            // Appliquer les mêmes filtres que la page produits
+            if ($request->has('min_price')) {
+                $query->where('price_ttc', '>=', $request->min_price);
+            }
+            if ($request->has('max_price')) {
+                $query->where('price_ttc', '<=', $request->max_price);
+            }
+            if ($request->boolean('promo')) {
+                $query->where('is_promoted', true)
+                    ->whereNotNull('promo_price');
+            }
+            if ($request->boolean('in_stock')) {
+                $query->whereHas('skus', function ($q) {
+                    $q->where('stock_quantity', '>', 0);
+                });
+            }
+
+            $sortBy = $request->get('sort', 'position');
+            switch ($sortBy) {
+                case 'price_asc':
+                    $query->orderBy('price_ttc', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price_ttc', 'desc');
+                    break;
+                case 'name':
+                    $query->orderBy('name', 'asc');
+                    break;
+                case 'newest':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+                default:
+                    $query->orderBy('position')->orderBy('created_at', 'desc');
+            }
+
+            $products = $query->paginate(20)->through(function ($product) {
+                return $this->ensureProductData($product);
             });
-        }
 
-        $sortBy = $request->get('sort', 'position');
-        switch ($sortBy) {
-            case 'price_asc':
-                $query->orderBy('price_ttc', 'asc');
-                break;
-            case 'price_desc':
-                $query->orderBy('price_ttc', 'desc');
-                break;
-            case 'name':
-                $query->orderBy('name', 'asc');
-                break;
-            case 'newest':
-                $query->orderBy('created_at', 'desc');
-                break;
-            default:
-                $query->orderBy('position')->orderBy('created_at', 'desc');
-        }
+            // Sous-catégories
+            $subcategories = $category->children()
+                ->where('is_active', true)
+                ->orderBy('position')
+                ->get();
 
-        $products = $query->paginate(20)->through(function ($product) {
-            return $this->ensureProductData($product);
+            return Inertia::render('Shop/Category', [
+                'category' => $category,
+                'subcategories' => $subcategories,
+                'products' => $products,
+                'filters' => [
+                    'min_price' => $request->min_price,
+                    'max_price' => $request->max_price,
+                    'promo' => $request->boolean('promo'),
+                    'in_stock' => $request->boolean('in_stock'),
+                    'sort' => $sortBy,
+                ],
+            ]);
         });
-
-        // Sous-catégories
-        $subcategories = $category->children()
-            ->where('is_active', true)
-            ->orderBy('position')
-            ->get();
-
-        return Inertia::render('Shop/Category', [
-            'category' => $category,
-            'subcategories' => $subcategories,
-            'products' => $products,
-            'filters' => [
-                'min_price' => $request->min_price,
-                'max_price' => $request->max_price,
-                'promo' => $request->boolean('promo'),
-                'in_stock' => $request->boolean('in_stock'),
-                'sort' => $sortBy,
-            ],
-        ]);
     }
 
     /**
@@ -320,32 +329,37 @@ class ShopController extends Controller
             ]);
         }
 
-        // Recherche dans les produits
-        $products = Product::with(['category', 'defaultSku' => function($query) {
-                $query->orderBy('id');
-            }])
-            ->where('is_active', true)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                    ->orWhere('description', 'like', "%{$query}%");
-            })
-            ->orderBy('name')
-            ->paginate(20)
-            ->through(function ($product) {
-                return $this->ensureProductData($product);
-            });
+        // Créer une clé de cache pour la recherche
+        $cacheKey = 'shop.search.' . md5($query);
 
-        // Recherche dans les catégories
-        $categories = Category::where('is_active', true)
-            ->where('name', 'like', "%{$query}%")
-            ->orderBy('name')
-            ->get();
+        return $this->cacheWithTags(['shop', 'products', 'categories'], $cacheKey, 5, function () use ($query) {
+            // Recherche dans les produits
+            $products = Product::with(['category', 'defaultSku' => function($query) {
+                    $query->orderBy('id');
+                }])
+                ->where('is_active', true)
+                ->where(function ($q) use ($query) {
+                    $q->where('name', 'like', "%{$query}%")
+                        ->orWhere('description', 'like', "%{$query}%");
+                })
+                ->orderBy('name')
+                ->paginate(20)
+                ->through(function ($product) {
+                    return $this->ensureProductData($product);
+                });
 
-        return Inertia::render('Shop/Search', [
-            'query' => $query,
-            'products' => $products,
-            'categories' => $categories,
-        ]);
+            // Recherche dans les catégories
+            $categories = Category::where('is_active', true)
+                ->where('name', 'like', "%{$query}%")
+                ->orderBy('name')
+                ->get();
+
+            return Inertia::render('Shop/Search', [
+                'query' => $query,
+                'products' => $products,
+                'categories' => $categories,
+            ]);
+        });
     }
 
     /**
@@ -429,6 +443,30 @@ class ShopController extends Controller
             'success' => true,
             'message' => 'Merci de votre inscription ! Vous recevrez bientôt nos actualités.',
         ]);
+    }
+
+    /**
+     * Helper pour gérer le cache avec tags et fallback
+     */
+    private function cacheWithTags(array $tags, string $key, int $minutes, callable $callback)
+    {
+        try {
+            // Essayer d'utiliser les tags si supportés
+            if (Cache::getStore() instanceof \Illuminate\Cache\TaggableStore) {
+                return Cache::tags($tags)->remember($key, now()->addMinutes($minutes), $callback);
+            } else {
+                // Fallback sans tags
+                return Cache::remember($key, now()->addMinutes($minutes), $callback);
+            }
+        } catch (\Exception $e) {
+            // En cas d'erreur de cache, exécuter directement
+            \Log::warning('Cache error in ShopController', [
+                'key' => $key,
+                'tags' => $tags,
+                'error' => $e->getMessage()
+            ]);
+            return $callback();
+        }
     }
 
     /**

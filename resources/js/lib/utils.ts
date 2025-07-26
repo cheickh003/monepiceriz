@@ -186,3 +186,40 @@ export function sanitizeForReact<T = any>(obj: T): T {
   
   return sanitized as T
 }
+
+/**
+ * Formate une date ISO en français au format "24 juillet 2025 à 14:30"
+ * @param dateString - Chaîne de date au format ISO (ex: "2025-07-24T14:30:00Z")
+ * @returns Date formatée en français
+ */
+export function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString)
+    
+    // Vérifier si la date est valide
+    if (isNaN(date.getTime())) {
+      return 'Date invalide'
+    }
+    
+    // Options pour formater la date en français
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Africa/Abidjan', // Timezone de la Côte d'Ivoire
+    }
+    
+    // Formater la date avec les options françaises
+    const formatter = new Intl.DateTimeFormat('fr-FR', options)
+    const formattedDate = formatter.format(date)
+    
+    // Remplacer "à" par "à" pour s'assurer du bon format
+    return formattedDate.replace(' à ', ' à ')
+    
+  } catch (error) {
+    console.error('Erreur lors du formatage de la date:', error)
+    return 'Date invalide'
+  }
+}

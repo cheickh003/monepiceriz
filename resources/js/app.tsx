@@ -4,7 +4,10 @@ import './bootstrap';
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import { router } from '@inertiajs/react';
 import ErrorBoundary from '@/Components/ErrorBoundary';
+import { Toaster } from '@/Components/ui/toaster';
+import { toast } from '@/Components/ui/use-toast';
 import { sanitizeForReact } from '@/lib/utils';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -61,10 +64,31 @@ createInertiaApp({
         root.render(
             <ErrorBoundary>
                 <App {...safeProps} />
+                <Toaster />
             </ErrorBoundary>
         );
     },
     progress: {
         color: '#4B5563',
     },
+});
+
+// Configuration globale des gestionnaires d'erreur Inertia
+router.on('error', (event) => {
+    const errors = event.detail.errors;
+    console.error('Inertia Global Error:', errors);
+    
+    // Pour les erreurs globales non gérées, on peut afficher un toast générique
+    // Les pages individuelles devraient gérer leurs propres erreurs avec le hook useErrorHandler
+    if (Object.keys(errors).length > 0) {
+        const firstErrorKey = Object.keys(errors)[0];
+        const firstError = errors[firstErrorKey];
+        const errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+        
+        toast({
+            title: "Erreur de validation",
+            description: errorMessage || "Une erreur de validation s'est produite",
+            variant: "destructive",
+        });
+    }
 });

@@ -7,7 +7,9 @@ use App\Domain\Catalog\Models\ProductSku;
 use App\Domain\Catalog\Models\Category;
 use App\Domain\Catalog\Models\ProductAttribute;
 use App\Domain\Catalog\Models\ProductAttributeValue;
+use App\Events\ProductUpdated;
 use App\Http\Controllers\Controller;
+use App\Services\BroadcastManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -54,7 +56,18 @@ class ProductController extends Controller
         $categories = Category::orderBy('name')->get();
         
         return Inertia::render('Admin/Products/Index', [
-            'products' => $products,
+            'products' => [
+                'data' => $products->items(),
+                'links' => $products->linkCollection()->toArray(),
+                'meta' => [
+                    'current_page' => $products->currentPage(),
+                    'last_page' => $products->lastPage(),
+                    'total' => $products->total(),
+                    'per_page' => $products->perPage(),
+                    'from' => $products->firstItem(),
+                    'to' => $products->lastItem(),
+                ]
+            ],
             'categories' => $categories,
             'filters' => $request->only(['category_id', 'search', 'is_active', 'is_variable_weight'])
         ]);
@@ -66,7 +79,12 @@ class ProductController extends Controller
     public function create()
     {
         $categories = Category::orderBy('name')->get();
-        $attributes = ProductAttribute::orderBy('name')->get();
+        $attributes = ProductAttribute::with('values')->orderBy('name')->get()
+            ->map(function ($attribute) {
+                // Ensure values is always an array
+                $attribute->values = $attribute->values ?? collect([]);
+                return $attribute;
+            });
         
         return Inertia::render('Admin/Products/Create', [
             'categories' => $categories,
@@ -85,8 +103,13 @@ class ProductController extends Controller
             'reference' => 'required|string|max:50|unique:products',
             'barcode' => 'nullable|string|max:50|unique:products',
             'description' => 'nullable|string',
+            'short_description' => 'nullable|string|max:500',
             'category_id' => 'required|exists:categories,id',
+            'country_of_origin' => 'nullable|string|max:100',
+            'brand' => 'nullable|string|max:100',
+            'position' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'is_variable_weight' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
@@ -94,12 +117,22 @@ class ProductController extends Controller
             'gallery_images' => 'nullable|array',
             'gallery_images.*' => 'image|max:10240',
             'skus' => 'required|array|min:1',
-            'skus.*.purchase_price' => 'required|numeric|min:0',
-            'skus.*.price_ht' => 'required|numeric|min:0',
+            'skus.*.name' => 'nullable|string|max:255',
+            'skus.*.sku' => 'required|string|max:50',
+            'skus.*.barcode' => 'nullable|string|max:50',
+            'skus.*.purchase_price' => 'nullable|numeric|min:0',
+            'skus.*.price_ht' => 'nullable|numeric|min:0',
             'skus.*.price_ttc' => 'required|numeric|min:0',
+            'skus.*.vat_rate' => 'nullable|numeric|min:0|max:100',
             'skus.*.weight' => 'nullable|numeric|min:0',
             'skus.*.stock_quantity' => 'nullable|integer|min:0',
             'skus.*.is_default' => 'boolean',
+            'skus.*.is_variable_weight' => 'boolean',
+            'skus.*.reserved_quantity' => 'nullable|integer|min:0',
+            'skus.*.low_stock_threshold' => 'nullable|integer|min:0',
+            'skus.*.weight_grams' => 'nullable|numeric|min:0',
+            'skus.*.min_weight_grams' => 'nullable|numeric|min:0',
+            'skus.*.max_weight_grams' => 'nullable|numeric|min:0',
             'skus.*.attributes' => 'array'
         ]);
         
@@ -107,7 +140,8 @@ class ProductController extends Controller
             $validated['slug'] = Str::slug($validated['name']);
         }
         
-        DB::transaction(function () use ($validated, $request) {
+        $product = null;
+        DB::transaction(function () use ($validated, $request, &$product) {
             // Create product
             $productData = $validated;
             unset($productData['skus'], $productData['main_image'], $productData['gallery_images']);
@@ -155,6 +189,18 @@ class ProductController extends Controller
             }
         });
         
+        // Déclencher l'événement de synchronisation via BroadcastManager
+        if ($product) {
+            try {
+                BroadcastManager::dispatch()->productUpdated($product, 'created');
+            } catch (\Exception $e) {
+                \Log::warning('Échec de la synchronisation lors de la création du produit', [
+                    'product_id' => $product->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
         return redirect()->route('admin.products.index')
             ->with('success', 'Produit créé avec succès.');
     }
@@ -178,7 +224,12 @@ class ProductController extends Controller
     {
         $product->load(['skus.attributeValues']);
         $categories = Category::orderBy('name')->get();
-        $attributes = ProductAttribute::with('values')->orderBy('name')->get();
+        $attributes = ProductAttribute::with('values')->orderBy('name')->get()
+            ->map(function ($attribute) {
+                // Ensure values is always an array
+                $attribute->values = $attribute->values ?? collect([]);
+                return $attribute;
+            });
         
         return Inertia::render('Admin/Products/Edit', [
             'product' => $product,
@@ -198,8 +249,13 @@ class ProductController extends Controller
             'reference' => 'required|string|max:50|unique:products,reference,' . $product->id,
             'barcode' => 'nullable|string|max:50|unique:products,barcode,' . $product->id,
             'description' => 'nullable|string',
+            'short_description' => 'nullable|string|max:500',
             'category_id' => 'required|exists:categories,id',
+            'country_of_origin' => 'nullable|string|max:100',
+            'brand' => 'nullable|string|max:100',
+            'position' => 'nullable|integer|min:0',
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
             'is_variable_weight' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
@@ -210,12 +266,22 @@ class ProductController extends Controller
             'remove_gallery_images.*' => 'string',
             'skus' => 'required|array|min:1',
             'skus.*.id' => 'nullable|exists:product_skus,id',
-            'skus.*.purchase_price' => 'required|numeric|min:0',
-            'skus.*.price_ht' => 'required|numeric|min:0',
+            'skus.*.name' => 'nullable|string|max:255',
+            'skus.*.sku' => 'required|string|max:50',
+            'skus.*.barcode' => 'nullable|string|max:50',
+            'skus.*.purchase_price' => 'nullable|numeric|min:0',
+            'skus.*.price_ht' => 'nullable|numeric|min:0',
             'skus.*.price_ttc' => 'required|numeric|min:0',
+            'skus.*.vat_rate' => 'nullable|numeric|min:0|max:100',
             'skus.*.weight' => 'nullable|numeric|min:0',
             'skus.*.stock_quantity' => 'nullable|integer|min:0',
             'skus.*.is_default' => 'boolean',
+            'skus.*.is_variable_weight' => 'boolean',
+            'skus.*.reserved_quantity' => 'nullable|integer|min:0',
+            'skus.*.low_stock_threshold' => 'nullable|integer|min:0',
+            'skus.*.weight_grams' => 'nullable|numeric|min:0',
+            'skus.*.min_weight_grams' => 'nullable|numeric|min:0',
+            'skus.*.max_weight_grams' => 'nullable|numeric|min:0',
             'skus.*.attributes' => 'array'
         ]);
         
@@ -297,6 +363,16 @@ class ProductController extends Controller
             }
         });
         
+        // Déclencher l'événement de synchronisation via BroadcastManager
+        try {
+            BroadcastManager::dispatch()->productUpdated($product, 'updated');
+        } catch (\Exception $e) {
+            \Log::warning('Échec de la synchronisation lors de la mise à jour du produit', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
         return redirect()->route('admin.products.index')
             ->with('success', 'Produit mis à jour avec succès.');
     }
@@ -312,6 +388,16 @@ class ProductController extends Controller
         // Delete the product
         $product->delete();
         
+        // Déclencher l'événement de synchronisation via BroadcastManager
+        try {
+            BroadcastManager::dispatch()->productUpdated($product, 'deleted');
+        } catch (\Exception $e) {
+            \Log::warning('Échec de la synchronisation lors de la suppression du produit', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
         return redirect()->route('admin.products.index')
             ->with('success', 'Produit supprimé avec succès.');
     }
@@ -321,7 +407,8 @@ class ProductController extends Controller
      */
     public function duplicate(Product $product)
     {
-        DB::transaction(function () use ($product) {
+        $newProduct = null;
+        DB::transaction(function () use ($product, &$newProduct) {
             $product->load(['skus.attributeValues']);
             
             // Create new product
@@ -343,6 +430,18 @@ class ProductController extends Controller
             }
         });
         
+        // Déclencher l'événement de synchronisation via BroadcastManager
+        if ($newProduct) {
+            try {
+                BroadcastManager::dispatch()->productUpdated($newProduct, 'created');
+            } catch (\Exception $e) {
+                \Log::warning('Échec de la synchronisation lors de la duplication du produit', [
+                    'product_id' => $newProduct->id,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
         return redirect()->route('admin.products.index')
             ->with('success', 'Produit dupliqué avec succès.');
     }
@@ -358,10 +457,40 @@ class ProductController extends Controller
             'skus.*.stock_quantity' => 'required|integer|min:0'
         ]);
         
+        // Collecter les changements de stock pour l'événement
+        $stockChanges = [];
+        
         foreach ($validated['skus'] as $skuData) {
-            ProductSku::where('id', $skuData['id'])
+            $sku = ProductSku::where('id', $skuData['id'])
                 ->where('product_id', $product->id)
-                ->update(['stock_quantity' => $skuData['stock_quantity']]);
+                ->first();
+                
+            $previousStock = $sku->stock_quantity;
+            $newStock = $skuData['stock_quantity'];
+            
+            $sku->update(['stock_quantity' => $newStock]);
+            
+            $stockChanges[] = [
+                'sku_id' => $sku->id,
+                'previous' => $previousStock,
+                'new' => $newStock,
+                'difference' => $newStock - $previousStock,
+            ];
+        }
+        
+        // Déclencher l'événement de synchronisation avec les détails des changements
+        try {
+            $totalChange = array_sum(array_map(fn($change) => $change['difference'], $stockChanges));
+            
+            BroadcastManager::dispatch()->stockUpdated($product, [
+                'skus' => $stockChanges,
+                'total_change' => $totalChange,
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Échec de la synchronisation lors de la mise à jour du stock', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage()
+            ]);
         }
         
         return response()->json(['message' => 'Stock mis à jour avec succès.']);

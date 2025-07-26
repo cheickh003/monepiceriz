@@ -59,9 +59,12 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
               <Menu className="h-6 w-6" />
             </SafeButton>
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <Package2 className="h-6 w-6 text-green-600" />
-              <span className="font-bold text-lg text-gray-900">MonEpice&Riz</span>
+            <Link href="/" className="flex items-center">
+              <img 
+                src="/logo-monepiceriz.png" 
+                alt="Monepiceriz" 
+                className="h-8 w-auto"
+              />
             </Link>
 
             {/* Actions */}
@@ -114,9 +117,12 @@ export function MobileHeader({ onCartClick, user }: MobileHeaderProps) {
           <div className="flex items-center justify-between px-8 py-4 max-w-7xl mx-auto">
             <div className="flex items-center gap-8">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-2">
-                <Package2 className="h-8 w-8 text-green-600" />
-                <h1 className="text-2xl font-bold text-green-600">MonEpice&Riz</h1>
+              <Link href="/" className="flex items-center">
+                <img 
+                  src="/logo-monepiceriz.png" 
+                  alt="Monepiceriz" 
+                  className="h-10 w-auto"
+                />
               </Link>
               
               {/* Localisation desktop */}

@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ShopDataVersion;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -19,7 +20,13 @@ class HandleInertiaRequests extends Middleware
      */
     public function version(Request $request): ?string
     {
-        return parent::version($request);
+        // Récupérer la version optimisée des données du shop
+        $dataVersion = ShopDataVersion::getGlobalVersion();
+        
+        // Combiner avec la version des assets parent
+        $assetVersion = parent::version($request);
+        
+        return md5($assetVersion . $dataVersion);
     }
 
     /**

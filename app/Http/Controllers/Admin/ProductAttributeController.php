@@ -16,9 +16,15 @@ class ProductAttributeController extends Controller
      */
     public function index()
     {
-        $attributes = ProductAttribute::withCount('values')
+        $attributes = ProductAttribute::with('values')
+            ->withCount('values')
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($attribute) {
+                // Ensure values is always an array
+                $attribute->values = $attribute->values ?? collect([]);
+                return $attribute;
+            });
             
         return Inertia::render('Admin/ProductAttributes/Index', [
             'attributes' => $attributes
@@ -89,8 +95,20 @@ class ProductAttributeController extends Controller
     {
         $productAttribute->load('values');
         
+        // Get products using this attribute
+        $productsUsingAttribute = $productAttribute->values()
+            ->with(['skus.product:id,name,reference'])
+            ->get()
+            ->pluck('skus')
+            ->flatten()
+            ->pluck('product')
+            ->unique('id')
+            ->values()
+            ->take(20); // Limit to 20 for performance
+        
         return Inertia::render('Admin/ProductAttributes/Edit', [
-            'attribute' => $productAttribute
+            'attribute' => $productAttribute,
+            'products_using_attribute' => $productsUsingAttribute
         ]);
     }
 

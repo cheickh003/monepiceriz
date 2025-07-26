@@ -100,7 +100,11 @@ export default function Login({
                         </Link>
                     )}
 
-                    <PrimaryButton className="ms-4" disabled={processing}>
+                    <PrimaryButton 
+                        className="ms-4" 
+                        processing={processing}
+                        loadingText="Connexion..."
+                    >
                         Log in
                     </PrimaryButton>
                 </div>
