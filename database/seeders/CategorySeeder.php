@@ -38,11 +38,11 @@ class CategorySeeder extends Seeder
             ]],
             
             // Épices et Condiments
-            ['name' => 'Épices', 'icon' => 'pepper', 'description' => 'Épices du monde entier pour sublimer vos plats', 'is_featured' => true, 'meta_title' => 'Épices de qualité - MonEpice&Riz', 'meta_description' => 'Découvrez notre sélection d'épices fraîches et authentiques', 'children' => []],
+            ['name' => 'Épices', 'icon' => 'pepper', 'description' => 'Épices du monde entier pour sublimer vos plats', 'is_featured' => true, 'meta_title' => 'Épices de qualité - MonEpice&Riz', 'meta_description' => 'Découvrez notre sélection d\'épices fraîches et authentiques', 'children' => []],
             ['name' => 'Sauces', 'icon' => 'sauce', 'description' => 'Sauces et condiments pour tous les goûts', 'children' => [
                 ['name' => 'Ketchup', 'icon' => 'tomato', 'description' => 'Ketchup et sauces tomate'],
                 ['name' => 'Mayonnaise', 'icon' => 'egg', 'description' => 'Mayonnaise et sauces blanches'],
-                ['name' => 'Moutarde', 'icon' => 'jar', 'description' => 'Moutardes fines et à l'ancienne'],
+                ['name' => 'Moutarde', 'icon' => 'jar', 'description' => 'Moutardes fines et à l\'ancienne'],
             ]],
             
             // Viandes et Poissons
@@ -71,13 +71,13 @@ class CategorySeeder extends Seeder
             ]],
             
             // Hygiène et Entretien
-            ['name' => 'Hygiène', 'icon' => 'soap', 'description' => 'Produits d'hygiène pour toute la famille', 'children' => [
+            ['name' => 'Hygiène', 'icon' => 'soap', 'description' => 'Produits d\'hygiène pour toute la famille', 'children' => [
                 ['name' => 'Hygiène Buccale', 'icon' => 'toothbrush', 'description' => 'Dentifrices et brosses à dents'],
                 ['name' => 'Hygiène Corporelle', 'icon' => 'shower', 'description' => 'Savons et gels douche'],
             ]],
             
-            ['name' => 'Produits d\'Entretien', 'icon' => 'spray-can', 'description' => 'Tout pour l'entretien de la maison', 'children' => [
-                ['name' => 'PH', 'icon' => 'sparkles', 'description' => 'Produits d'hygiène pH neutre'],
+            ['name' => 'Produits d\'Entretien', 'icon' => 'spray-can', 'description' => 'Tout pour l\'entretien de la maison', 'children' => [
+                ['name' => 'PH', 'icon' => 'sparkles', 'description' => 'Produits d\'hygiène pH neutre'],
                 ['name' => 'Emballage', 'icon' => 'package', 'description' => 'Sacs et emballages'],
             ]],
             

@@ -443,7 +443,7 @@ class ShopController extends Controller
         
         // Ensure effective_price is always set
         if (!isset($product->effective_price)) {
-            $product->effective_price = $product->getEffectivePrice();
+            $product->effective_price = $product->effective_price;
         }
         
         // Ensure category relationship is loaded
