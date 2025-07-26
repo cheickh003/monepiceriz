@@ -24,26 +24,41 @@ class ShopController extends Controller
             ->get();
 
         // Produits en vedette (featured)
-        $promotedProducts = Product::with(['category', 'defaultSku'])
+        $promotedProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where('is_featured', true)
             ->orderBy('id', 'desc')
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Nouveaux produits
-        $newProducts = Product::with(['category', 'defaultSku'])
+        $newProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->orderBy('created_at', 'desc')
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Produits populaires (random pour l'instant)
-        $popularProducts = Product::with(['category', 'defaultSku'])
+        $popularProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->inRandomOrder()
             ->take(8)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         return Inertia::render('Shop/Home', [
             'categories' => $categories,
@@ -65,7 +80,9 @@ class ShopController extends Controller
      */
     public function products(Request $request)
     {
-        $query = Product::with(['category', 'defaultSku'])
+        $query = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true);
 
         // Filtre par catégorie
@@ -73,12 +90,33 @@ class ShopController extends Controller
             $query->where('category_id', $request->category);
         }
 
-        // Filtre par prix
-        if ($request->has('min_price')) {
-            $query->where('price_ttc', '>=', $request->min_price);
+        // Filtre par prix (basé sur les SKUs par défaut)
+        $minPrice = null;
+        $maxPrice = null;
+
+        if ($request->filled('min_price')) {
+            $minPrice = (float)$request->min_price;
+        } elseif ($request->filled('price_min') && (float)$request->price_min > 0) {
+            $minPrice = (float)$request->price_min;
         }
-        if ($request->has('max_price')) {
-            $query->where('price_ttc', '<=', $request->max_price);
+
+        if ($request->filled('max_price')) {
+            $maxPrice = (float)$request->max_price;
+        } elseif ($request->filled('price_max') && (float)$request->price_max > 0) {
+            $maxPrice = (float)$request->price_max;
+        }
+
+        if ($minPrice !== null || $maxPrice !== null) {
+            $query->whereHas('skus', function ($q) use ($minPrice, $maxPrice) {
+                if ($minPrice !== null) {
+                    $q->where('price_ttc', '>=', $minPrice);
+                }
+                if ($maxPrice !== null) {
+                    $q->where('price_ttc', '<=', $maxPrice);
+                }
+                // Ne considérer que les SKUs par défaut pour la comparaison
+                $q->where('is_default', true);
+            });
         }
 
         // Filtre par promotion
@@ -110,11 +148,32 @@ class ShopController extends Controller
                 $query->orderBy('created_at', 'desc');
                 break;
             default:
-                $query->orderBy('position');
+                $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate(20);
+        $products = $query->paginate(20)->through(function ($product) {
+            // Ensure product data is complete
+            $product = $this->ensureProductData($product);
+            
+            // Ajouter des métadonnées pour chaque produit
+            if ($product->is_promoted && $product->promo_price && $product->price_ttc) {
+                $product->savings = $product->price_ttc - $product->promo_price;
+                $product->savings_percentage = round((($product->price_ttc - $product->promo_price) / $product->price_ttc) * 100);
+            }
+            // Ajouter une note fictive
+            $product->rating = rand(35, 50) / 10;
+            $product->reviews_count = rand(50, 500);
+            
+            // Indicateur de stock faible
+            if ($product->defaultSku) {
+                $stock = $product->defaultSku->stock_quantity ?? 0;
+                $product->stock_status = $stock <= 0 ? 'out_of_stock' : ($stock <= 5 ? 'low_stock' : 'in_stock');
+            }
+            
+            return $product;
+        });
 
+        // Catégories avec comptage pour les filtres
         $categories = Category::where('is_active', true)
             ->orderBy('position')
             ->get();
@@ -154,15 +213,20 @@ class ShopController extends Controller
         ]);
 
         // Produits similaires
-        $relatedProducts = Product::with(['category', 'defaultSku'])
+        $relatedProducts = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('is_active', true)
             ->take(4)
-            ->get();
+            ->get()
+            ->map(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         return Inertia::render('Shop/ProductDetail', [
-            'product' => $product,
+            'product' => $this->ensureProductData($product),
             'relatedProducts' => $relatedProducts,
         ]);
     }
@@ -176,7 +240,9 @@ class ShopController extends Controller
             abort(404);
         }
 
-        $query = Product::with(['category', 'defaultSku'])
+        $query = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where('category_id', $category->id);
 
@@ -212,10 +278,12 @@ class ShopController extends Controller
                 $query->orderBy('created_at', 'desc');
                 break;
             default:
-                $query->orderBy('position');
+                $query->orderBy('position')->orderBy('created_at', 'desc');
         }
 
-        $products = $query->paginate(20);
+        $products = $query->paginate(20)->through(function ($product) {
+            return $this->ensureProductData($product);
+        });
 
         // Sous-catégories
         $subcategories = $category->children()
@@ -253,14 +321,19 @@ class ShopController extends Controller
         }
 
         // Recherche dans les produits
-        $products = Product::with(['category', 'defaultSku'])
+        $products = Product::with(['category', 'defaultSku' => function($query) {
+                $query->orderBy('id');
+            }])
             ->where('is_active', true)
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('description', 'like', "%{$query}%");
             })
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(20)
+            ->through(function ($product) {
+                return $this->ensureProductData($product);
+            });
 
         // Recherche dans les catégories
         $categories = Category::where('is_active', true)
@@ -273,5 +346,118 @@ class ShopController extends Controller
             'products' => $products,
             'categories' => $categories,
         ]);
+    }
+
+    /**
+     * API pour les suggestions de recherche
+     */
+    public function searchSuggestions(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        if (strlen($query) < 2) {
+            return response()->json([
+                'products' => [],
+                'categories' => [],
+            ]);
+        }
+
+        // Recherche des produits
+        $products = Product::where('is_active', true)
+            ->where(function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('description', 'like', "%{$query}%")
+                  ->orWhere('short_description', 'like', "%{$query}%")
+                  ->orWhere('tags', 'like', "%{$query}%");
+            })
+            ->with(['category', 'defaultSku'])
+            ->select('id', 'name', 'slug', 'price_ttc', 'promo_price', 'is_promoted', 'category_id')
+            ->take(5)
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'slug' => $product->slug,
+                    'price' => $product->price_ttc,
+                    'promo_price' => $product->promo_price,
+                    'is_promoted' => $product->is_promoted,
+                    'category' => $product->category ? [
+                        'name' => $product->category->name,
+                        'slug' => $product->category->slug,
+                    ] : null,
+                    'image' => $product->getFirstImageUrl(),
+                ];
+            });
+
+        // Recherche des catégories
+        $categories = Category::where('is_active', true)
+            ->where('name', 'like', "%{$query}%")
+            ->select('id', 'name', 'slug', 'icon')
+            ->take(3)
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                    'icon' => $category->icon,
+                    'products_count' => $category->products()->where('is_active', true)->count(),
+                ];
+            });
+
+        return response()->json([
+            'products' => $products,
+            'categories' => $categories,
+        ]);
+    }
+    
+    /**
+     * S'abonner à la newsletter
+     */
+    public function subscribeNewsletter(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|max:255',
+            'consent' => 'accepted',
+        ]);
+        
+        // TODO: Implémenter la logique de stockage
+        // Pour l'instant, on retourne juste un succès
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Merci de votre inscription ! Vous recevrez bientôt nos actualités.',
+        ]);
+    }
+
+    /**
+     * Ensure product data is complete for frontend
+     */
+    private function ensureProductData($product)
+    {
+        // Ensure image_url is always set
+        if (!isset($product->image_url)) {
+            $product->image_url = $product->getFirstImageUrl();
+        }
+        
+        // Ensure effective_price is always set
+        if (!isset($product->effective_price)) {
+            $product->effective_price = $product->getEffectivePrice();
+        }
+        
+        // Ensure category relationship is loaded
+        if (!$product->relationLoaded('category')) {
+            $product->load('category');
+        }
+        
+        // Ensure defaultSku relationship is loaded
+        if (!$product->relationLoaded('defaultSku')) {
+            $product->load(['defaultSku' => function($query) {
+                $query->orderBy('id');
+            }]);
+        }
+        
+        return $product;
     }
 }

@@ -38,16 +38,108 @@ export interface ButtonProps
   asChild?: boolean
 }
 
+// Helper function to validate props for Symbol values
+function validateButtonProps(props: any): boolean {
+  if (!props) return true
+  
+  for (const key in props) {
+    const value = props[key]
+    if (typeof value === 'symbol') {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`Button component received Symbol value for prop "${key}"`, value)
+      }
+      return false
+    }
+  }
+  
+  return true
+}
+
+// Helper function to sanitize props
+function sanitizeProps(props: any): any {
+  if (!props) return props
+  
+  const sanitized: any = {}
+  
+  for (const key in props) {
+    const value = props[key]
+    if (typeof value === 'symbol') {
+      // Convert Symbol to string representation
+      sanitized[key] = value.toString()
+    } else {
+      sanitized[key] = value
+    }
+  }
+  
+  return sanitized
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    )
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
+    // Validate and sanitize props to prevent Symbol conversion errors
+    const isValidProps = validateButtonProps(props)
+    const sanitizedProps = sanitizeProps(props)
+    
+    // If asChild is true, validate that children is a valid React element
+    if (asChild && children) {
+      if (!React.isValidElement(children)) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Button: asChild is true but children is not a valid React element')
+        }
+        // Fallback to regular button
+        asChild = false
+      }
+    }
+    
+    try {
+      const Comp = asChild ? Slot : "button"
+      
+      // Additional safety check for Slot component
+      if (asChild) {
+        // Ensure children can safely receive props
+        if (React.isValidElement(children)) {
+          const childProps = (children as any).props || {}
+          if (!validateButtonProps(childProps)) {
+            // Fallback to regular button if child props contain Symbols
+            const FallbackComp = "button"
+            return (
+              <FallbackComp
+                className={cn(buttonVariants({ variant, size, className }))}
+                ref={ref}
+                {...sanitizedProps}
+              >
+                {children}
+              </FallbackComp>
+            )
+          }
+        }
+      }
+      
+      return (
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...sanitizedProps}
+        >
+          {children}
+        </Comp>
+      )
+    } catch (error) {
+      // Fallback rendering if Slot component fails
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Button component error:', error)
+      }
+      
+      return (
+        <button
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...sanitizedProps}
+        >
+          {children}
+        </button>
+      )
+    }
   }
 )
 Button.displayName = "Button"

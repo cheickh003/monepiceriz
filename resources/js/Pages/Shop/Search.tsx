@@ -2,7 +2,7 @@ import { Head, useForm } from '@inertiajs/react'
 import ShopLayout from '@/Layouts/ShopLayout'
 import { ProductSection } from '@/Components/shop/ProductSection'
 import { Search as SearchIcon } from 'lucide-react'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 
 interface SearchProps {
   query: string
@@ -38,9 +38,9 @@ export default function Search({ query, products, categories }: SearchProps) {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-            <Button type="submit">
+            <SafeButton type="submit">
               Rechercher
-            </Button>
+            </SafeButton>
           </div>
         </form>
 

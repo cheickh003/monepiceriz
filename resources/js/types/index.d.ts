@@ -12,3 +12,6 @@ export type PageProps<
         user: User;
     };
 };
+
+// Re-export types from Product.ts
+export * from './Product';

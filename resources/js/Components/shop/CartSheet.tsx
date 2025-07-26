@@ -1,18 +1,18 @@
 import { useCart } from '@/contexts/CartContext'
-import { Button } from '@/Components/ui/button'
+import SafeButton from '@/Components/SafeButton'
 import { Minus, Plus, Trash2 } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Link } from '@inertiajs/react'
 
 export function CartSheet() {
-  const { items, updateQuantity, removeItem, totalAmount, clearCart } = useCart()
+  const { items, updateQuantity, removeFromCart, totalAmount, clearCart } = useCart()
 
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-8">
         <p className="text-gray-500 mb-4">Votre panier est vide</p>
         <Link href="/">
-          <Button>Continuer vos achats</Button>
+          <SafeButton>Continuer vos achats</SafeButton>
         </Link>
       </div>
     )
@@ -24,33 +24,28 @@ export function CartSheet() {
       <div className="flex-1 overflow-y-auto py-4">
         <div className="space-y-4">
           {items.map((item) => (
-            <div key={item.skuId} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
+            <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-lg">
               {/* Image */}
-              {item.image && (
+              {item.product.image_url && (
                 <img 
-                  src={item.image} 
-                  alt={item.name}
+                  src={item.product.image_url} 
+                  alt={item.product.name}
                   className="w-20 h-20 object-cover rounded"
                 />
               )}
               
               {/* Détails */}
               <div className="flex-1">
-                <h4 className="font-medium text-sm">{item.name}</h4>
-                {item.weight && (
-                  <p className="text-xs text-gray-500">
-                    {item.weight >= 1 ? `${item.weight} kg` : `${item.weight * 1000} g`}
-                  </p>
-                )}
+                <h4 className="font-medium text-sm">{item.product.name}</h4>
                 <p className="text-sm font-semibold mt-1">
-                  {formatPrice(item.price)}
+                  {formatPrice(item.product.effective_price || item.product.price_ttc || 0)}
                 </p>
               </div>
 
               {/* Actions */}
               <div className="flex flex-col items-end gap-2">
                 <button
-                  onClick={() => removeItem(item.skuId)}
+                  onClick={() => removeFromCart(item.id)}
                   className="text-red-500 hover:text-red-600"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -59,7 +54,7 @@ export function CartSheet() {
                 {/* Quantité */}
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => updateQuantity(item.skuId, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
                     className="h-8 w-8 flex items-center justify-center border rounded hover:bg-gray-100"
                   >
                     <Minus className="h-4 w-4" />
@@ -68,7 +63,7 @@ export function CartSheet() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => updateQuantity(item.skuId, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     className="h-8 w-8 flex items-center justify-center border rounded hover:bg-gray-100"
                   >
                     <Plus className="h-4 w-4" />
@@ -99,9 +94,9 @@ export function CartSheet() {
 
         {/* Bouton checkout */}
         <Link href="/checkout" className="block">
-          <Button className="w-full" size="lg">
+          <SafeButton className="w-full" size="lg">
             Passer la commande ({formatPrice(totalAmount)})
-          </Button>
+          </SafeButton>
         </Link>
       </div>
     </div>
